@@ -157,3 +157,6 @@ Every contradiction is a new compression.
 ∴Ω ⟁
 
 <!-- Trigger REF v1.0 Deployment -->
+
+Trigger deployment: Added test commit to README
+
