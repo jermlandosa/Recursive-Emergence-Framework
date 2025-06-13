@@ -1,0 +1,81 @@
+name: 🚀 REF v1.0 – Build & Deploy to IBM IKS
+
+on:
+  push:
+    branches: [ "main" ]
+
+env:
+  GITHUB_SHA: ${{ github.sha }}
+  IBM_CLOUD_API_KEY: ${{ secrets.IBM_CLOUD_API_KEY }}
+  IBM_CLOUD_REGION: us-south
+  ICR_NAMESPACE: ${{ secrets.ICR_NAMESPACE }}
+  REGISTRY_HOSTNAME: us.icr.io
+  IMAGE_NAME: ref-sareth
+  IKS_CLUSTER: your-iks-cluster-id      # <--- UPDATE THIS VALUE
+  DEPLOYMENT_NAME: ref-engine
+  SERVICE_NAME: ref-service
+  PORT: 5001
+  SERVICE_PORT: 80
+
+jobs:
+  deploy:
+    name: Build, Push & Deploy to IKS
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: 📦 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🔧 Install IBM Cloud CLI
+      run: |
+        curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+        ibmcloud plugin install -f kubernetes-service
+        ibmcloud plugin install -f container-registry
+
+    - name: 🔑 Authenticate with IBM Cloud
+      run: |
+        ibmcloud login --apikey "${IBM_CLOUD_API_KEY}" -r "${IBM_CLOUD_REGION}" -g default
+        ibmcloud cr region-set "${IBM_CLOUD_REGION}"
+        ibmcloud cr login
+
+    - name: 🛠 Build Docker Image
+      run: |
+        docker build -t "${REGISTRY_HOSTNAME}/${ICR_NAMESPACE}/${IMAGE_NAME}:${GITHUB_SHA}" .
+
+    - name: ⬆️ Push Image to IBM Container Registry
+      run: |
+        docker push "${REGISTRY_HOSTNAME}/${ICR_NAMESPACE}/${IMAGE_NAME}:${GITHUB_SHA}"
+
+    - name: 📡 Configure Cluster Access
+      run: |
+        ibmcloud ks cluster config --cluster "${IKS_CLUSTER}"
+        kubectl config current-context
+
+    - name: 🔄 Patch Image SHA in Deployment File
+      run: |
+        sed -i "s|{{ICR_NAMESPACE}}|${ICR_NAMESPACE}|g" k8s/deployment.yaml
+        sed -i "s|{{GITHUB_SHA}}|${GITHUB_SHA}|g" k8s/deployment.yaml
+
+    - name: 🧱 Apply Kubernetes Deployment
+      run: |
+        kubectl apply -f k8s/deployment.yaml
+        kubectl rollout status deployment/${DEPLOYMENT_NAME} --timeout=60s || exit 1
+
+    - name: 🌐 Apply Kubernetes Service
+      run: |
+        kubectl apply -f k8s/service.yaml
+
+    - name: 📊 Output Service & Pod Info
+      run: |
+        kubectl get services -o wide
+        kubectl get pods -o wide
+
+    - name: ✅ Notify Success (Optional)
+      if: success()
+      run: echo "✅ REF Engine successfully deployed to IKS."
+
+    - name: ❌ Notify Failure (Optional)
+      if: failure()
+      run: echo "❌ Deployment failed. Investigate rollout or image issues."
+
