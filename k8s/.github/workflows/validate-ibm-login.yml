@@ -1,0 +1,28 @@
+name: 🔐 Validate IBM Cloud Login
+
+on:
+  workflow_dispatch:  # Trigger manually in GitHub UI
+
+env:
+  IBM_CLOUD_API_KEY: ${{ secrets.IBM_CLOUD_API_KEY }}
+  IBM_CLOUD_REGION: us-south  # Change if your region is different
+
+jobs:
+  validate-login:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📦 Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: 🔧 Install IBM Cloud CLI
+      run: |
+        curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+        ibmcloud plugin install container-registry
+        ibmcloud plugin install kubernetes-service
+
+    - name: 🔐 Try IBM Cloud Login
+      run: |
+        echo "⏳ Trying to log in to IBM Cloud..."
+        ibmcloud login --apikey "$IBM_CLOUD_API_KEY" -r "$IBM_CLOUD_REGION" -g default
+        ibmcloud target
