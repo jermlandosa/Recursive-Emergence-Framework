@@ -3,19 +3,22 @@ import hashlib
 import json
 
 class GlyphEngine:
+    """
+    Creates a short, human-readable hash (“glyph”) of each recursion state.
+    This lets you track state-to-state evolution symbolically.
+    """
     def __init__(self):
-        self.glyph_trace = []
+        self._trace = []          # [(depth, glyph), …]
 
-    def generate_glyph(self, state, depth):
-        # Use a hash of the state + depth as symbolic representation
-        state_str = json.dumps(state)
-        glyph = hashlib.sha256(f"{depth}-{state_str}".encode()).hexdigest()[:12]  # short glyph
-        self.glyph_trace.append((depth, glyph))
+    def generate(self, state, depth: int) -> str:
+        state_str = json.dumps(state, sort_keys=True)
+        glyph = hashlib.sha256(f"{depth}:{state_str}".encode()).hexdigest()[:12]
+        self._trace.append((depth, glyph))
         return glyph
 
-    def get_trace(self):
-        return self.glyph_trace
+    def trace(self):
+        return self._trace
 
     def print_trace(self):
-        for depth, glyph in self.glyph_trace:
-            print(f"Depth {depth}: Glyph {glyph}")
+        for depth, glyph in self._trace:
+            print(f"Depth {depth:02d} → {glyph}")
