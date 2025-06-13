@@ -78,6 +78,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   rules:
     - host: ref.yourdomain.com  # <-- Replace with your actual domain
@@ -94,3 +95,21 @@ spec:
     - hosts:
         - ref.yourdomain.com
       secretName: ref-tls-cert
+
+---
+
+# k8s/cluster-issuer.yaml
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: your@email.com  # <-- Replace with your real email address
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
