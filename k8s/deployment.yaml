@@ -1,0 +1,96 @@
+# k8s/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ref-engine
+  labels:
+    app: ref
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ref
+  template:
+    metadata:
+      labels:
+        app: ref
+    spec:
+      containers:
+        - name: ref-container
+          image: us.icr.io/{{ICR_NAMESPACE}}/ref-sareth:{{GITHUB_SHA}}
+          ports:
+            - containerPort: 5001
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+          env:
+            - name: GITHUB_SHA
+              value: "{{GITHUB_SHA}}"
+---
+
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ref-engine-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ref-engine
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+
+# k8s/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ref-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: ref
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5001
+
+---
+
+# k8s/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ref-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  rules:
+    - host: ref.yourdomain.com  # <-- Replace with your actual domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ref-service
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - ref.yourdomain.com
+      secretName: ref-tls-cert
