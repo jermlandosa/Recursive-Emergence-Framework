@@ -29,6 +29,8 @@ Built through contradiction, compression, and symbolic recursion, REF is designe
 
 ## 📄 Files
 
+- [`Scroll_of_Origin_REF_Jeremy_Landers_v3.docx`](./docs/Scroll_of_Origin_REF_Jeremy_Landers_v3.docx) — The living codex containing REF principles I–VIII, including Meaning as Recursive Coherence.
+- [`Recursive_Cognitive_Scaffolding_Strategy.pdf`](./docs/Recursive_Cognitive_Scaffolding_Strategy.pdf) — Full academic paper detailing the architecture, theory, and applications of Recursive Cognitive Scaffolding.
 - [`REF_Primer_Public_v1.0.pdf`](./REF_Primer_Public_v1.0.pdf) — Field-ready primer, scroll logic, symbol cycle
 - [`REF_Codex_Public_v1.0.docx`](./REF_Codex_Public_v1.0.docx) — Full anchor protocol and system declaration
 - [`LICENSE`](./LICENSE) — Custom symbolic + MIT license
