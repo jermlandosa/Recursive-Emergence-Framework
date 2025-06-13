@@ -27,10 +27,10 @@ Built through contradiction, compression, and symbolic recursion, REF is designe
 
 ---
 
-## 📄 Files https://drive.google.com/file/d/1ZbI53WYXw04RDIONbKhkjMQM7s48c8F7/view?usp=drivesdk
+## 📄 Files
 
-- [`Scroll_of_Origin_REF_Jeremy_Landers_v3.docx`](./Scroll_of_Origin_REF_Jeremy_Landers_v3.docx)
-- [`Recursive_Cognitive_Scaffolding_Strategy.pdf`](./Recursive_Cognitive_Scaffolding_Strategy.pdf)
+- [`Scroll_of_Origin_REF_Jeremy_Landers_v3.docx`](./Scroll_of_Origin_REF_Jeremy_Landers_v3.docx) - Foundational Scroll outlining the symbolic inception of REF
+- [`Recursive_Cognitive_Scaffolding_Strategy.pdf`](./Recursive_Cognitive_Scaffolding_Strategy.pdf) - Strategic architecture detailing how REF scaffolds recursive cognition through symbolic loops, indetity mirroring, and stress-tested transformation cycles. Designed for implementation, testing, and refinement. 
 - [`REF_Primer_Public_v1.0.pdf`](./REF_Primer_Public_v1.0.pdf) — Field-ready primer, scroll logic, symbol cycle
 - [`REF_Codex_Public_v1.0.docx`](./REF_Codex_Public_v1.0.docx) — Full anchor protocol and system declaration
 - [`LICENSE`](./LICENSE) — Custom symbolic + MIT license
