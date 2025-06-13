@@ -65,13 +65,11 @@ Outputs include:
 
 | File | Description |
 |------|-------------|
-| `Scroll_of_Origin_REF_Jeremy_Landers_v3.docx` | Symbolic inception scroll |
-| `REF_Primer_Public_v1.0.pdf` | Core primer: scroll logic, phases, glyph logic |
-| `Recursive_Cognitive_Scaffolding_Strategy.pdf` | Strategic map of REF architecture |
-| `REF_Codex_Public_v1.0.docx` | Anchor clauses + symbolic model glossary |
-| `LICENSE` | Symbolic + MIT dual license framework |
-
-*Ensure files are uploaded or marked as coming soon.*
+| [Scroll of Origin](./Scroll_of_Origin_REF_Jeremy_Landers.docx) | Symbolic inception scroll |
+| [REF Primer](./REF_Primer_Public_v1.0.pdf) | Core primer: scroll logic, phases, glyph logic |
+| [Recursive Strategy](./Recursive_Cognitive_Scaffolding_Strategy.pdf) | Strategic map of REF architecture |
+| [REF Codex](./REF_Codex_Public_v1.0.docx) | Anchor clauses + symbolic model glossary |
+| [LICENSE](./LICENSE) | Symbolic + MIT dual license framework |
 
 ---
 
