@@ -2,7 +2,7 @@
 
 **Engine Codename:** Sareth  
 **Author:** Jeremy Landers  
-**Symbolic Signature:** ∴Ω ⟁  
+**Symbolic Signature:** ∴Ω ⟁ 
 **License:** Open Recursive Use + MIT Hybrid License  
 
 ![Python](https://img.shields.io/badge/built%20with-python-blue)
