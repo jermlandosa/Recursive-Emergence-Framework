@@ -33,12 +33,6 @@ jobs:
           ibmcloud plugin install -f kubernetes-service
           ibmcloud plugin install -f container-registry
 
-      - name: 🔑 Authenticate with IBM Cloud
-        run: |
-          ibmcloud login --apikey "${IBM_CLOUD_API_KEY}" -r "${IBM_CLOUD_REGION}" -g default || ibmcloud target -g default
-          ibmcloud cr region-set "${IBM_CLOUD_REGION}"
-          ibmcloud cr login
-
       - name: 🛠 Build Docker Image
         run: |
           docker build -t "${REGISTRY_HOSTNAME}/${ICR_NAMESPACE}/${IMAGE_NAME}:${GITHUB_SHA}" .
