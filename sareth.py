@@ -1,3 +1,6 @@
+import os
+
+IS_CI = os.environ.get("CI") == "true"
 # sareth.py
 import datetime
 import json
