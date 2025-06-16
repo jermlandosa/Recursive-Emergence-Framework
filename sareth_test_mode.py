@@ -8,7 +8,7 @@ test_prompts = [
     "Explain recursion.",
     "What's the REF?",
     "What happens if I say exit?",
-    "exit"
+    "exit"  # <- force stop at the end
 ]
 
 def simulate_user_session():
