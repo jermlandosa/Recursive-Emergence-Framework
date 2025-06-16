@@ -19,12 +19,28 @@ class Sareth:
         self.memory = []
         self.protocols = {
             "truth_check": self.truth_check,
-            "depth_scan": self.depth_scan,
-            "reflect": self.reflect
-        }
+def is_deep(insight: str) -> bool:
+    """Returns True if the insight survives truth-rich recursion filters."""
+    if not insight:
+        return False
+    shallow_signals = ["it depends", "i'm not sure", "could be", "maybe", "just", "kind of"]
+    too_short = len(insight.strip()) < 30
+    vague = any(phrase in insight.lower() for phrase in shallow_signals)
+    return not (too_short or vague)
 
-    def observe(self, input_text):
-        timestamp = datetime.datetime.now().isoformat()
+def main(prompt):
+    if prompt.lower() == "exit":
+        print("🧪 Test session complete. REF core exited successfully.")
+        return "exit"
+
+    output = run_sareth_engine(prompt)
+
+    if not is_deep(output):
+        print("⟁∅ Insight rejected by False Depth Drift Scan")
+        return "⟁∅ Insight rejected"
+
+    print(output)
+    return output
         self.memory.append({"timestamp": timestamp, "input": input_text})
         response = self.process(input_text)
         self.memory[-1]["response"] = response
