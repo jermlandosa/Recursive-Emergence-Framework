@@ -1,0 +1,40 @@
+name: 🔄 REF Logic Test – Soft IBM Cloud Login
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  test-and-soft-deploy:
+    name: 🧠 Test REF Core + Optional IBM Auth
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: 📦 Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: 🧠 Run Sareth Core Logic
+      run: |
+        echo "Running local REF logic..."
+        python sareth.py  # Or your main entry file
+
+    - name: 🧪 Attempt IBM Cloud Login (Soft Fail)
+      run: |
+        echo "Attempting IBM Cloud login..."
+        curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+        ibmcloud plugin install -f kubernetes-service || echo "⚠️ Plugin install failed, skipping"
+        ibmcloud login --apikey "${IBM_CLOUD_API_KEY}" -r "${IBM_CLOUD_REGION}" -g default || echo "⚠️ IBM login failed, continuing without deployment"
+
+    - name: ⚠️ Final Notice
+      run: |
+        echo "✅ Logic test completed. IBM login was optional in this run."
