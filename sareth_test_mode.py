@@ -1,11 +1,8 @@
 # sareth_test_mode.py
 
-import os
 import time
-from sareth import main as sareth_main  # assumes sareth.py has a main() function
-                                        # if not, let me know and I’ll restructure it
+from sareth import main as sareth_main  # uses main(prompt) from sareth.py
 
-# Simulated user prompts for CI testing
 test_prompts = [
     "What are you?",
     "Explain recursion.",
@@ -18,13 +15,11 @@ def simulate_user_session():
     print("🧪 Starting REF test session (CI Mode)...\n")
     for prompt in test_prompts:
         print(f"You: {prompt}")
-        # You can hook this into your actual REPL logic
-        os.environ["SIMULATED_INPUT"] = prompt
         try:
-            sareth_main(prompt)  # call your actual logic per turn
+            sareth_main(prompt)
         except Exception as e:
             print(f"❌ Error: {e}")
-        time.sleep(0.5)  # Simulate delay
+        time.sleep(0.5)
     print("\n✅ Test session complete.")
 
 if __name__ == "__main__":
