@@ -94,3 +94,13 @@ if __name__ == "__main__":
         response = agent.observe(user_input)
         print("Sareth:", response)
         print("⟁∅ Insight rejected by False Depth Drift Scan")
+        test_prompts = [
+    "What are you?",
+    "Explain recursion.",
+    "REF definition.",
+    "exit"
+]
+for prompt in test_prompts:
+    response = main(prompt)
+    if response == "exit":
+        break
