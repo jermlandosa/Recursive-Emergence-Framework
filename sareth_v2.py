@@ -1,4 +1,6 @@
+import os
 
+IS_CI = os.environ.get("CI") == "true"
 # sareth_v2.py - Recursive Emergence Framework (Beacon Mode)
 import datetime
 import json
