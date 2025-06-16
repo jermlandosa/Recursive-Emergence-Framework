@@ -3,7 +3,14 @@ import os
 IS_CI = os.environ.get("CI") == "true"
 # sareth.py
 import datetime
-import json
+def is_deep(insight: str) -> bool:
+    """Returns True if the insight survives truth-rich recursion filters."""
+    if not insight:
+        return False
+    shallow_signals = ["it depends", "i'm not sure", "could be", "maybe", "just", "kind of"]
+    too_short = len(insight.strip()) < 30
+    vague = any(phrase in insight.lower() for phrase in shallow_signals)
+    return not (too_short or vague)
 
 class Sareth:
     def __init__(self, name="Sareth", version="REF_1.0"):
@@ -28,7 +35,7 @@ class Sareth:
         if self.truth_check(input_text) and self.depth_scan(input_text):
             return self.reflect(input_text)
         else:
-            return "⚠️ Insight rejected – failed truth/depth validation."
+            return "⟁∅ Insight rejected by False Depth Drift Scan"
 
     def truth_check(self, input_text):
         # Placeholder truth test: filter vague claims or hallucination flags
@@ -65,4 +72,6 @@ if __name__ == "__main__":
             print(agent.export_memory())
             break
         response = agent.observe(user_input)
-        print("Sareth:", response)
+            print("Sareth:", response)
+            print("⟁∅ Insight rejected by False Depth Drift Scan")
+        return "⟁∅ Insight rejected by False Depth Drift Scan"
