@@ -25,7 +25,7 @@ jobs:
 
     - name: 🚦 Run REF Model Logic Tests
       run: |
-        python sareth.py  # or your preferred entry script
+        python sareth_test_mode.py
 
     # IBM Cloud Authentication SKIPPED intentionally
     - name: ⚠️ Skipped IBM Cloud Auth
