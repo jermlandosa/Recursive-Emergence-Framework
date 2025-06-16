@@ -71,7 +71,7 @@ if __name__ == "__main__":
             print("📦 Memory Snapshot:")
             print(agent.export_memory())
             break
-        response = agent.observe(user_input)
+       response = agent.observe(user_input)
             print("Sareth:", response)
             print("⟁∅ Insight rejected by False Depth Drift Scan")
         return "⟁∅ Insight rejected by False Depth Drift Scan"
