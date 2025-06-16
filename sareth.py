@@ -51,7 +51,17 @@ if __name__ == "__main__":
     agent = Sareth()
     print("🔁 Sareth Agent Initialized. Type 'exit' to quit.")
     while True:
+        import os
+
+# Check if running in CI environment
+if os.environ.get("CI"):
+    user_input = "default_value"  # Provide a default response for CI pipelines
+else:
+    try:
         user_input = input("You: ")
+    except EOFError:
+        print("Error: No input available.")
+        user_input = "default_value"  # Fallback value
         if user_input.lower() in ["exit", "quit"]:
             print("📦 Memory Snapshot:")
             print(agent.export_memory())
