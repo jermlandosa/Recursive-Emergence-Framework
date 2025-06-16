@@ -18,6 +18,10 @@ class Sareth:
         self.version = version
         self.memory = []
         self.protocols = {
+    "truth_check": self.truth_check,
+    "depth_scan": self.depth_scan,
+    "reflect": self.reflect
+}
             "truth_check": self.truth_check,
 def is_deep(insight: str) -> bool:
     """Returns True if the insight survives truth-rich recursion filters."""
