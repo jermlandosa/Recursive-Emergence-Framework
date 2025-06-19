@@ -1,4 +1,4 @@
-import os
+from drift_protocol import detect_drift, trigger_drift_protocol
 
 IS_CI = os.environ.get("CI") == "true"
 # sareth.py
