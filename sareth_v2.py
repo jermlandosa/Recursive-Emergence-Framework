@@ -54,6 +54,15 @@ if __name__ == "__main__":
 ")
     while True:
         user_input = input("You: ")
+        
+    if user_input.strip().lower() == "drift()":
+        trigger_drift_protocol()
+        continue
+
+    if detect_drift(user_input):
+        trigger_drift_protocol()
+        continue
+        
         if user_input.strip().lower() == "exit":
             print("\n⟁ Final Memory Log:")
             print(agent.export_memory())
