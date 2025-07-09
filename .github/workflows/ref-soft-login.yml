@@ -38,5 +38,4 @@ jobs:
         ibmcloud plugin install -f kubernetes-service || echo "⚠️ Plugin install failed, skipping"
         ibmcloud login --apikey "${IBM_CLOUD_API_KEY}" -r "${IBM_CLOUD_REGION}" -g default || echo "⚠️ IBM login failed, continuing without deployment"
 
-    - name: ⚠️ Final Notice
-      run: |        echo "✅ Logic test completed. IBM login was optional in this run."
+    - name: ⚠️ Final Notice      run: |        echo "✅ Logic test completed. IBM login was optional in this run."
