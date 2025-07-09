@@ -19,6 +19,7 @@ class Recursor:
 
     def run(self, seed_state):
         state = seed_state
+        self.memory.store_state(state)  # persist initial state
 
         for depth in range(self.max_depth):
             # 1️⃣  Log the raw state
@@ -32,6 +33,7 @@ class Recursor:
             tension = self.evaluator.calculate_tension(state)
             if tension > self.tension_threshold:
                 print(f"[HALT] tension {tension:.3f} exceeded threshold at depth {depth}")
+                self.memory.store_state(state)
                 break
 
             # 4️⃣  Transform / recurse
@@ -41,11 +43,12 @@ class Recursor:
             if self.evaluator.has_converged(state, next_state):
                 print(f"[CONVERGED] at depth {depth}")
                 state = next_state
+                self.memory.store_state(state)
                 break
 
             # 6️⃣  Persist state & iterate
-            self.memory.store_state(state)
             state = next_state
+            self.memory.store_state(state)
 
         return state
 
