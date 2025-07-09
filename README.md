@@ -30,7 +30,7 @@ Designed to withstand ego illusions, performative loops, and belief-based collap
 
 | File | Description |
 |------|-------------|
-| `Scroll_of_Origin_REF_Jeremy_Landers_v3.docx` | Foundational scroll: REF’s symbolic inception |
+| `Scroll_of_Origin_REF_Jeremy_Landers.docx` | Foundational scroll: REF’s symbolic inception |
 | `Recursive_Cognitive_Scaffolding_Strategy.pdf` | Strategy: identity mirroring, loop compression, stress-tested recursion |
 | `REF_Primer_Public_v1.0.pdf` | Primer: field logic, symbol loops, recursion engine |
 | `REF_Codex_Public_v1.0.docx` | Full anchor protocol + symbolic spec |
