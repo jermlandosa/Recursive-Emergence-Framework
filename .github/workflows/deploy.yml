@@ -70,5 +70,4 @@ jobs:
       run: echo "✅ REF Engine successfully deployed to IKS."
 
     - name: ❌ Notify Failure
-      if: failure()
-      run: echo "❌ Deployment failed. Investigate rollout or image issues."
+      if: failure()      run: echo "❌ Deployment failed. Investigate rollout or image issues."
