@@ -23,6 +23,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: 🧪 Run Tests
+      run: pytest -v
+
     - name: 🧠 Run Sareth Core Logic
       run: |
         echo "Running local REF logic..."
@@ -36,5 +39,4 @@ jobs:
         ibmcloud login --apikey "${IBM_CLOUD_API_KEY}" -r "${IBM_CLOUD_REGION}" -g default || echo "⚠️ IBM login failed, continuing without deployment"
 
     - name: ⚠️ Final Notice
-      run: |
-        echo "✅ Logic test completed. IBM login was optional in this run."
+      run: |        echo "✅ Logic test completed. IBM login was optional in this run."
