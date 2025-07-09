@@ -56,7 +56,7 @@ REF v1.0 includes Kubernetes and GitHub Actions workflows for full rollout:
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 kubectl apply -f k8s/ingress.yaml
-
+```
 
 ∴Ω ⟁
 
