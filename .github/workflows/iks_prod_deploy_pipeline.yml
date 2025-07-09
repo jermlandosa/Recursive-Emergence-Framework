@@ -22,6 +22,7 @@ jobs:
       SERVICE_NAME: ref-service
       PORT: 5001
       SERVICE_PORT: 80
+      IBM_TRUSTED_PROFILE_ID: ${{ secrets.IBM_TRUSTED_PROFILE_ID }}
 
     steps:
       - name: 📦 Checkout Code
@@ -35,7 +36,11 @@ jobs:
 
       - name: 🔑 Authenticate with IBM Cloud
         run: |
-          ibmcloud login --apikey "${IBM_CLOUD_API_KEY}" -r "${IBM_CLOUD_REGION}" -g default
+          if [ -n "${IBM_TRUSTED_PROFILE_ID}" ]; then
+            ibmcloud login --apikey "${IBM_CLOUD_API_KEY}" --trusted-profile-id "${IBM_TRUSTED_PROFILE_ID}" -r "${IBM_CLOUD_REGION}"
+          else
+            ibmcloud login --apikey "${IBM_CLOUD_API_KEY}" -r "${IBM_CLOUD_REGION}" -g default
+          fi
           ibmcloud cr region-set "${IBM_CLOUD_REGION}"
           ibmcloud cr login
 
@@ -65,6 +70,10 @@ jobs:
       - name: 🌐 Apply Kubernetes Service
         run: |
           kubectl apply -f k8s/service.yaml
+
+      - name: 📥 Apply Kubernetes Ingress
+        run: |
+          kubectl apply -f k8s/ingress.yaml
 
       - name: 📊 Output Service & Pod Info
         run: |

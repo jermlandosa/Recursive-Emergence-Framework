@@ -52,49 +52,6 @@ spec:
           type: Utilization
           averageUtilization: 70
 
----
-
-# k8s/service.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: ref-service
-spec:
-  type: LoadBalancer
-  selector:
-    app: ref
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 5001
-
----
-
-# k8s/ingress.yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: ref-ingress
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-spec:
-  rules:
-    - host: ref.yourdomain.com  # <-- Replace with your actual domain
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: ref-service
-                port:
-                  number: 80
-  tls:
-    - hosts:
-        - ref.yourdomain.com
-      secretName: ref-tls-cert
 
 ---
 
