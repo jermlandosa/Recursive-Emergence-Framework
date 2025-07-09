@@ -2,6 +2,9 @@ import os
 import json
 import datetime
 
+# Detect if running in a Continuous Integration environment
+IS_CI = os.environ.get("CI") == "true"
+
 # Placeholder engine runner
 
 def run_sareth_engine(prompt: str) -> str:
