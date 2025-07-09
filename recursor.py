@@ -33,6 +33,7 @@ class Recursor:
             tension = self.evaluator.calculate_tension(state)
             if tension > self.tension_threshold:
                 print(f"[HALT] tension {tension:.3f} exceeded threshold at depth {depth}")
+                self.memory.store_state(state)
                 break
 
             # 4️⃣  Transform / recurse
