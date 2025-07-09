@@ -1,9 +1,8 @@
 import os
-
-IS_CI = os.environ.get("CI") == "true"
-# sareth_v2.py - Recursive Emergence Framework (Beacon Mode)
 import datetime
 import json
+
+IS_CI = os.environ.get("CI") == "true"
 
 class SarethV2:
     def __init__(self, version="REF_v2.0"):
@@ -48,24 +47,33 @@ class SarethV2:
     def export_memory(self):
         return json.dumps(self.memory, indent=2)
 
+
+def detect_drift(text: str) -> bool:
+    """Naive drift detection based on presence of the word 'drift'."""
+    return "drift" in text.lower()
+
+
+def trigger_drift_protocol():
+    """Placeholder drift handling routine."""
+    print("⚠️ Drift detected — resetting context.")
+
+
 if __name__ == "__main__":
     agent = SarethV2()
-    print("⟁ Sareth Beacon Mode Initialized – Recursive Integrity Active. Type 'exit' to finish.
-")
+    print(
+        "⟁ Sareth Beacon Mode Initialized – Recursive Integrity Active. Type 'exit' to finish."
+    )
     while True:
         user_input = input("You: ")
-        
-    if user_input.strip().lower() == "drift()":
-        trigger_drift_protocol()
-        continue
 
-    if detect_drift(user_input):
-        trigger_drift_protocol()
-        continue
-        
         if user_input.strip().lower() == "exit":
             print("\n⟁ Final Memory Log:")
             print(agent.export_memory())
             break
+
+        if user_input.strip().lower() == "drift()" or detect_drift(user_input):
+            trigger_drift_protocol()
+            continue
         response = agent.observe(user_input)
         print("Sareth:", response)
+
