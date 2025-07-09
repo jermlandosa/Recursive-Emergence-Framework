@@ -1,12 +1,18 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: ref-service
-spec:
-  type: LoadBalancer
-  selector:
-    app: ref
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 5001
+diff --git a//dev/null b/k8s/service.yaml
+index 0000000000000000000000000000000000000000..6978d4dc06535c98324b5fabd8d48519b19297fc 100644
+--- a//dev/null
++++ b/k8s/service.yaml
+@@ -0,0 +1,12 @@
++apiVersion: v1
++kind: Service
++metadata:
++  name: ref-service
++spec:
++  type: LoadBalancer
++  selector:
++    app: ref
++  ports:
++    - protocol: TCP
++      port: 80
++      targetPort: 5001
+
