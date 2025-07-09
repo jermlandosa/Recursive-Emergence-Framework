@@ -20,3 +20,22 @@ def test_deep_prompt():
 def test_rejected_prompt():
     prompt = "maybe this will be rejected"
     assert sareth.main(prompt) == "⟁∅ Insight rejected"
+
+
+def test_session_prompts():
+    prompts = [
+        "What are you?",
+        "Explain recursion.",
+        "What's the REF?",
+        "What happens if I say exit?",
+        "exit",
+    ]
+    expected = [
+        "🪞 Reflecting on: 'What are you?'",
+        "🪞 Reflecting on: 'Explain recursion.'",
+        "🪞 Reflecting on: 'What's the REF?'",
+        "🪞 Reflecting on: 'What happens if I say exit?'",
+        "exit",
+    ]
+    outputs = [sareth.main(p) for p in prompts]
+    assert outputs == expected
