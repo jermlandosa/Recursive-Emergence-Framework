@@ -1,2 +1,0 @@
-- name: 🧠 Run REF Test Mode
-  run: python sareth_test_mode.py
