@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: ref-container
-          image: ref-engine:latest
+          image: registry.heroku.com/{{HEROKU_APP_NAME}}/web
           ports:
             - containerPort: 5001
           resources:
