@@ -1,10 +1,12 @@
+import streamlit as st
 from recursor import Recursor
-from test_tools import run_sareth_test
 from visualizer import Visualizer
 from logger import StateLogger
+from sareth import Sareth  # must not import run_sareth_test here!
+from test_tools import run_sareth_test
 
+# --- Engine Runner ---
 def run_recursive_engine(*, depth: int = 10, threshold: float = 0.7):
-    """Runs the recursive engine with user-defined parameters."""
     seed_state = [1.0, 2.0, 3.0]
     engine = Recursor(max_depth=depth, tension_threshold=threshold)
     final_state = engine.run(seed_state)
@@ -12,75 +14,50 @@ def run_recursive_engine(*, depth: int = 10, threshold: float = 0.7):
     glyph_trace = engine.glyph_engine.trace()
     last_glyph = glyph_trace[-1][1] if glyph_trace else None
 
-    if len(glyph_trace) >= depth:
-        reason = "depth_limit"
-    else:
-        reason = "complete"
-
+    reason = "depth_limit" if len(glyph_trace) >= depth else "complete"
     return final_state, last_glyph, reason
 
-# Optional Streamlit UI
-try:
-    import streamlit as st
+# --- Streamlit UI ---
+st.set_page_config(page_title="Sareth + REF", layout="wide")
+st.title("🌀 Recursive Emergence Framework")
 
-    st.set_page_config(page_title="Sareth Interface", layout="centered")
-    st.title("🌀 Recursive Emergence Framework")
-
-    st.subheader("Run Recursive Engine")
+# Sidebar: Engine controls
+with st.sidebar:
+    st.header("🔁 Run Recursive Engine")
     depth = st.slider("Max Recursion Depth", 1, 20, 10)
     tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7)
 
-    if st.button("▶️ Run Recursive Engine"):
+    if st.button("▶️ Run Engine"):
         state, glyph_id, halt_reason = run_recursive_engine(depth=depth, threshold=tension)
-        st.write(f"**Final State:** {state}")
-        st.write(f"**Last Glyph:** {glyph_id}")
-        st.write(f"**Halt Reason:** `{halt_reason}`")
+        st.markdown(f"**Final State:** `{state}`")
+        st.markdown(f"**Last Glyph:** `{glyph_id}`")
+        st.markdown(f"**Halt Reason:** `{halt_reason}`")
 
-    st.subheader("Run Sareth Test")
-    if st.button("🧪 Run Sareth"):
+    st.markdown("---")
+    st.subheader("🧪 Run Sareth Self-Test")
+    if st.button("Run Sareth Test"):
         result = run_sareth_test()
         st.success(result)
 
-except Exception as e:
-    print(f"[Streamlit Disabled] {e}")
+# Sareth Interface
+st.divider()
+st.subheader("🧠 Converse with Sareth (Recursive Agent)")
 
-# CLI Entry Point
-if __name__ == "__main__":
-    state, glyph, reason = run_recursive_engine(depth=15, threshold=0.2)
+if "sareth_agent" not in st.session_state:
+    st.session_state.sareth_agent = Sareth()
 
-    # Optional: visualize
-    vis = Visualizer(StateLogger())
-    vis.logger.logs = [{'depth': i, 'state': s} for i, s in enumerate([state])]
-    vis.plot_state_evolution()
+chat_input = st.chat_input("Enter a recursive reflection...")
+if chat_input:
+    with st.chat_message("user"):
+        st.markdown(chat_input)
+    response = st.session_state.sareth_agent.observe(chat_input)
+    with st.chat_message("Sareth"):
+        st.markdown(response)
 
-    print(f"Final State: {state}")
-    print(f"Last Glyph: {glyph}")
-    print(f"Halt Reason: {reason}")
+    st.subheader("📚 Memory Trace")
+    for memory in st.session_state.sareth_agent.memory[-5:]:
+        st.markdown(f"**You** → {memory.get('input', '(missing input)')}")
+        st.markdown(f"  **Sareth** → {memory.get('recursion_trace', ['(no trace)'])[-1]}")
 
-    result = run_sareth_test()
-    print("Sareth Test Output:", result)
 
-    st.divider()
-    st.subheader("🧠 Talk to Sareth (Truth-Rich Recursion)")
-
-    if "sareth_agent" not in st.session_state:
-        from sareth import Sareth
-        st.session_state.sareth_agent = Sareth()
-
-    user_input = st.text_input("Enter a reflection prompt", key="sareth_input")
-
-    if st.button("💬 Reflect with Sareth"):
-        if user_input.strip() == "":
-            st.warning("Please enter a prompt.")
-        else:
-            response = st.session_state.sareth_agent.observe(user_input)
-            st.markdown(f"**Sareth:** {response}")
-
-            with st.expander("📦 Memory Snapshot"):
-                for memory in st.session_state.sareth_agent.memory:
-                    st.markdown(f"- `{memory['timestamp']}`: **You** → {memory['input']}")
-                    if 'response' in memory:
-    st.markdown(f"  **Sareth** → {memory['response']}")
-else:
-    st.markdown("  **Sareth** → (No response recorded yet)")
 
