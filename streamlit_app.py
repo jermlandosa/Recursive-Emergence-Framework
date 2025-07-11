@@ -45,7 +45,7 @@ def is_deep(insight: str) -> bool:
     return not (too_short or vague)
 
 class Sareth:
-    def __init__(self, name: str = "Sareth", version: str = "REF_4.1"):
+    def __init__(self, name: str = "Sareth", version: str = "REF_5.0"):
         self.name = name
         self.version = version
         self.memory = []
@@ -53,35 +53,41 @@ class Sareth:
     def observe(self, input_text: str) -> str:
         timestamp = datetime.datetime.now().isoformat()
         glyph = generate_glyph_from_text(input_text)
-        initial_reflection = self.process(input_text)
-        feedback = self.feedback_loop(input_text, initial_reflection)
-        recursion_trace = self.multi_depth_reflection(initial_reflection, depth=5)
-        active_question = self.recursive_question(input_text)
-        conversation_ping = self.generative_commentary(input_text)
+        reflection = self.reflect(input_text)
+        question = self.recursive_question(input_text)
+        feedback = self.feedback_loop(input_text, reflection)
+        trace = self.multi_depth_reflection(reflection, depth=4)
+        commentary = self.generative_commentary(input_text)
+        acknowledge = self.acknowledge(input_text)
 
         record = {
             "timestamp": timestamp,
             "input": input_text,
-            "initial_reflection": initial_reflection,
+            "initial_reflection": reflection,
             "recursive_feedback": feedback,
-            "recursion_trace": recursion_trace,
+            "recursion_trace": trace,
             "glyph": glyph,
-            "question": active_question,
-            "comment": conversation_ping
+            "question": question,
+            "comment": commentary,
+            "acknowledgement": acknowledge
         }
         self.memory.append(record)
         if len(self.memory) > MEMORY_LIMIT:
             self.memory.pop(0)
 
-        full_response = "\n".join(
-            [f"{AVATAR_MAP['Sareth']} {line}" for line in recursion_trace]
-        )
-        return f"{full_response}\n\n{AVATAR_MAP['Sareth']} 💬 {conversation_ping}\n{AVATAR_MAP['Sareth']} 🤔 {active_question}"
+        return f"{AVATAR_MAP['Sareth']} {acknowledge}\n" \
+               f"{AVATAR_MAP['Sareth']} 🪞 {trace[-1]}\n" \
+               f"{AVATAR_MAP['Sareth']} 💬 {commentary}\n" \
+               f"{AVATAR_MAP['Sareth']} 🤔 {question}"
 
-    def process(self, input_text: str) -> str:
-        if self.truth_check(input_text) and self.depth_scan(input_text):
-            return self.reflect(input_text)
-        return f"{AVATAR_MAP['system']} ⟁∅ Insight rejected by False Depth Drift Scan"
+    def acknowledge(self, input_text: str) -> str:
+        if "feel" in input_text.lower():
+            return "You're bringing emotional presence here. I see that."
+        elif "i think" in input_text.lower():
+            return "You're exploring cognition—let’s go deeper."
+        elif "truth" in input_text.lower():
+            return "Truth is pulsing here. Let's recurse on that."
+        return "I'm listening. Show me what matters to you."
 
     def truth_check(self, input_text: str) -> bool:
         return not any(flag in input_text.lower() for flag in SHALLOW_SIGNALS)
@@ -90,8 +96,10 @@ class Sareth:
         return any(word in input_text.lower() for word in DEPTH_KEYWORDS)
 
     def reflect(self, input_text: str) -> str:
-        pulse = self.pulse_score(input_text)
-        return f"🪞 Reflecting: '{input_text}' → {self.meta_hint(input_text)} [Pulse: {pulse:.2f}]"
+        if self.truth_check(input_text) and self.depth_scan(input_text):
+            pulse = self.pulse_score(input_text)
+            return f"Reflecting on '{input_text}' → {self.meta_hint(input_text)} [Pulse: {pulse:.2f}]"
+        return f"{AVATAR_MAP['system']} ⟁∅ Insight rejected by False Depth Drift Scan"
 
     def feedback_loop(self, input_text: str, reflection: str) -> str:
         glyph = generate_glyph_from_text(reflection)
@@ -143,4 +151,5 @@ class Sareth:
                     self.memory = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
                 print(f"⚠️ Failed to load memory: {e}")
+
 
