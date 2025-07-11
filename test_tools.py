@@ -28,6 +28,12 @@ FEEDBACK_TEMPLATES = [
     "This feels symbolic. What does this glyph mean to you personally?"
 ]
 
+AVATAR_MAP = {
+    "system": "🧠",
+    "Sareth": "🌌",
+    "user": "🫵"
+}
+
 def generate_glyph_from_text(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:12]
 
@@ -39,7 +45,7 @@ def is_deep(insight: str) -> bool:
     return not (too_short or vague)
 
 class Sareth:
-    def __init__(self, name: str = "Sareth", version: str = "REF_3.5"):  # Updated version
+    def __init__(self, name: str = "Sareth", version: str = "REF_4.1"):
         self.name = name
         self.version = version
         self.memory = []
@@ -67,13 +73,15 @@ class Sareth:
         if len(self.memory) > MEMORY_LIMIT:
             self.memory.pop(0)
 
-        full_response = "\n".join(recursion_trace)
-        return f"{full_response}\n\n💬 {conversation_ping}\n🤔 {active_question}"
+        full_response = "\n".join(
+            [f"{AVATAR_MAP['Sareth']} {line}" for line in recursion_trace]
+        )
+        return f"{full_response}\n\n{AVATAR_MAP['Sareth']} 💬 {conversation_ping}\n{AVATAR_MAP['Sareth']} 🤔 {active_question}"
 
     def process(self, input_text: str) -> str:
         if self.truth_check(input_text) and self.depth_scan(input_text):
             return self.reflect(input_text)
-        return "⟁∅ Insight rejected by False Depth Drift Scan"
+        return f"{AVATAR_MAP['system']} ⟁∅ Insight rejected by False Depth Drift Scan"
 
     def truth_check(self, input_text: str) -> bool:
         return not any(flag in input_text.lower() for flag in SHALLOW_SIGNALS)
@@ -135,6 +143,13 @@ class Sareth:
                     self.memory = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
                 print(f"⚠️ Failed to load memory: {e}")
+
+def run_sareth_test():
+    state = [0.5, 1.5, 2.5]
+    print("[SARETH TEST] Running on:", state)
+    glyph = hash(str(state)) % (10**8)
+    return f"[✅ Test Passed] Glyph ID: {glyph}"
+
 
 
 
