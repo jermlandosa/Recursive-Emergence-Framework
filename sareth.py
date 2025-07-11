@@ -81,3 +81,10 @@ if __name__ == "__main__":
             break
         response = agent.observe(user_input)
         print("Sareth:", response)
+
+
+def run_sareth_test():
+    state = [0.5, 1.5, 2.5]
+    print("[SARETH] Testing state:", state)
+    glyph = hash(str(state)) % (10**8)
+    return f"Glyph ID: {glyph}"
