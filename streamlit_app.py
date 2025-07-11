@@ -1,46 +1,63 @@
-import streamlit as st
-import matplotlib.pyplot as plt
-import json
-from main import run_recursive_engine  # your core function
+from recursor import Recursor
+from sareth import run_sareth_test
+from visualizer import Visualizer
+from logger import StateLogger
 
-st.set_page_config(page_title="Sareth Interface", layout="centered")
+def run_recursive_engine(*, depth: int = 10, threshold: float = 0.7):
+    """Runs the recursive engine with user-defined parameters."""
+    seed_state = [1.0, 2.0, 3.0]
+    engine = Recursor(max_depth=depth, tension_threshold=threshold)
+    final_state = engine.run(seed_state)
 
-st.title("🌀 Sareth Interface Portal")
+    glyph_trace = engine.glyph_engine.trace()
+    last_glyph = glyph_trace[-1][1] if glyph_trace else None
 
-# Session state
-if "glyph_log" not in st.session_state:
-    st.session_state.glyph_log = []
+    if len(glyph_trace) >= depth:
+        reason = "depth_limit"
+    else:
+        reason = "complete"
 
-# Depth slider
-depth = st.slider("Recursion Depth", 1, 10, 3)
+    return final_state, last_glyph, reason
 
-# Prompt input (optional enhancement)
-prompt = st.text_input("Optional prompt input (not yet wired)")
+# Optional Streamlit UI
+try:
+    import streamlit as st
 
-# Run engine
-if st.button("Run Sareth"):
-    result = run_recursive_engine(depth=depth)
-    glyph_id = result.get("glyph", "Unknown")
-    state = result.get("state", [])
-    tension = result.get("tension", None)
-    
-    # Save to log
-    st.session_state.glyph_log.append({
-        "glyph": glyph_id,
-        "state": state,
-        "tension": tension
-    })
+    st.set_page_config(page_title="Sareth Interface", layout="centered")
+    st.title("🌀 Recursive Emergence Framework")
 
-# Log display
-if st.session_state.glyph_log:
-    st.subheader("🧬 Glyph Log")
-    for entry in reversed(st.session_state.glyph_log):
-        st.success(f"Glyph: {entry['glyph']} | Tension: {entry['tension']}")
-        fig, ax = plt.subplots()
-        ax.plot(entry["state"])
-        ax.set_title("State Vector")
-        st.pyplot(fig)
+    st.subheader("Run Recursive Engine")
+    depth = st.slider("Max Recursion Depth", 1, 20, 10)
+    tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7)
 
-    # Export button
-    st.download_button("📁 Export Glyph Log", json.dumps(st.session_state.glyph_log, indent=2), file_name="glyph_log.json")
+    if st.button("▶️ Run Recursive Engine"):
+        state, glyph_id, halt_reason = run_recursive_engine(depth=depth, threshold=tension)
+        st.write(f"**Final State:** {state}")
+        st.write(f"**Last Glyph:** {glyph_id}")
+        st.write(f"**Halt Reason:** `{halt_reason}`")
+
+    st.subheader("Run Sareth Test")
+    if st.button("🧪 Run Sareth"):
+        result = run_sareth_test()
+        st.success(result)
+
+except Exception as e:
+    print(f"[Streamlit Disabled] {e}")
+
+# CLI Entry Point
+if __name__ == "__main__":
+    state, glyph, reason = run_recursive_engine(depth=15, threshold=0.2)
+
+    # Optional: visualize
+    vis = Visualizer(StateLogger())
+    vis.logger.logs = [{'depth': i, 'state': s} for i, s in enumerate([state])]
+    vis.plot_state_evolution()
+
+    print(f"Final State: {state}")
+    print(f"Last Glyph: {glyph}")
+    print(f"Halt Reason: {reason}")
+
+    result = run_sareth_test()
+    print("Sareth Test Output:", result)
+
 
