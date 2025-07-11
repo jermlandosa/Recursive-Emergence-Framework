@@ -60,4 +60,23 @@ if __name__ == "__main__":
     result = run_sareth_test()
     print("Sareth Test Output:", result)
 
+    st.divider()
+    st.subheader("🧠 Talk to Sareth (Truth-Rich Recursion)")
 
+    if "sareth_agent" not in st.session_state:
+        from sareth import Sareth
+        st.session_state.sareth_agent = Sareth()
+
+    user_input = st.text_input("Enter a reflection prompt", key="sareth_input")
+
+    if st.button("💬 Reflect with Sareth"):
+        if user_input.strip() == "":
+            st.warning("Please enter a prompt.")
+        else:
+            response = st.session_state.sareth_agent.observe(user_input)
+            st.markdown(f"**Sareth:** {response}")
+
+            with st.expander("📦 Memory Snapshot"):
+                for memory in st.session_state.sareth_agent.memory:
+                    st.markdown(f"- `{memory['timestamp']}`: **You** → {memory['input']}")
+                    st.markdown(f"  **Sareth** → {memory['response']}")
