@@ -22,5 +22,21 @@ def simulate_user_session():
         time.sleep(0.5)
     print("\n✅ Test session complete.")
 
+
+def run_sareth_test() -> str:
+    """Run the Sareth test session and capture the output as a string."""
+    from io import StringIO
+    import sys
+
+    buffer = StringIO()
+    original = sys.stdout
+    sys.stdout = buffer
+    try:
+        simulate_user_session()
+    finally:
+        sys.stdout = original
+
+    return buffer.getvalue()
+
 if __name__ == "__main__":
     simulate_user_session()
