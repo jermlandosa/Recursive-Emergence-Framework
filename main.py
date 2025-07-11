@@ -1,11 +1,10 @@
 from recursor import Recursor
 from sareth import run_sareth_test
-from glyph_engine import generate_glyph  # if needed
-from logger import StateLogger
 from visualizer import Visualizer
+from logger import StateLogger
 
-def run_recursive_engine(depth: int = 10, threshold: float = 0.7):
-    """Convenience wrapper used by the Streamlit UI."""
+def run_recursive_engine(*, depth: int = 10, threshold: float = 0.7):
+    """Runs the recursive engine with user-defined parameters."""
     seed_state = [1.0, 2.0, 3.0]
     engine = Recursor(max_depth=depth, tension_threshold=threshold)
     final_state = engine.run(seed_state)
@@ -20,24 +19,36 @@ def run_recursive_engine(depth: int = 10, threshold: float = 0.7):
 
     return final_state, last_glyph, reason
 
-
-# Optional Streamlit UI block (runs only if Streamlit is available)
+# Optional Streamlit UI
 try:
     import streamlit as st
 
-    st.title("Sareth Interface Test")
-    if st.button("Run Sareth"):
-        output = run_sareth_test()
-        st.success(output)
+    st.set_page_config(page_title="Sareth Interface", layout="centered")
+    st.title("🌀 Recursive Emergence Framework")
+
+    st.subheader("Run Recursive Engine")
+    depth = st.slider("Max Recursion Depth", 1, 20, 10)
+    tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7)
+
+    if st.button("▶️ Run Recursive Engine"):
+        state, glyph, reason = run_recursive_engine(depth=depth, threshold=tension)
+        st.write(f"**Final State:** {state}")
+        st.write(f"**Last Glyph:** {glyph}")
+        st.write(f"**Halt Reason:** `{reason}`")
+
+    st.subheader("Run Sareth Test")
+    if st.button("🧪 Run Sareth"):
+        result = run_sareth_test()
+        st.success(result)
 
 except Exception as e:
-    print(f"[Streamlit UI skipped]: {e}")
+    print(f"[Streamlit Disabled] {e}")
 
-
+# CLI Entry Point
 if __name__ == "__main__":
     state, glyph, reason = run_recursive_engine(depth=15, threshold=0.2)
 
-    # Visualize recursion
+    # Optional: visualize
     vis = Visualizer(StateLogger())
     vis.logger.logs = [{'depth': i, 'state': s} for i, s in enumerate([state])]
     vis.plot_state_evolution()
@@ -48,6 +59,7 @@ if __name__ == "__main__":
 
     result = run_sareth_test()
     print("Sareth Test Output:", result)
+
 
 
 
