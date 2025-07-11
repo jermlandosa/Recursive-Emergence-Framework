@@ -1,22 +1,3 @@
-import streamlit as st
-from recursor import Recursor
-from visualizer import Visualizer
-from logger import StateLogger
-from sareth import Sareth  # must not import run_sareth_test here!
-from test_tools import run_sareth_test
-
-# --- Engine Runner ---
-def run_recursive_engine(*, depth: int = 10, threshold: float = 0.7):
-    seed_state = [1.0, 2.0, 3.0]
-    engine = Recursor(max_depth=depth, tension_threshold=threshold)
-    final_state = engine.run(seed_state)
-
-    glyph_trace = engine.glyph_engine.trace()
-    last_glyph = glyph_trace[-1][1] if glyph_trace else None
-
-    reason = "depth_limit" if len(glyph_trace) >= depth else "complete"
-    return final_state, last_glyph, reason
-
 # --- Streamlit UI ---
 st.set_page_config(page_title="Sareth + REF", layout="wide")
 st.title("🌀 Recursive Emergence Framework")
@@ -24,10 +5,10 @@ st.title("🌀 Recursive Emergence Framework")
 # Sidebar: Engine controls
 with st.sidebar:
     st.header("🔁 Run Recursive Engine")
-    depth = st.slider("Max Recursion Depth", 1, 20, 10)
-    tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7)
+    depth = st.slider("Max Recursion Depth", 1, 20, 10, key="depth_slider")
+    tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7, key="tension_slider")
 
-    if st.button("▶️ Run Engine"):
+    if st.button("▶️ Run Engine", key="run_engine_btn"):
         state, glyph_id, halt_reason = run_recursive_engine(depth=depth, threshold=tension)
         st.markdown(f"**Final State:** `{state}`")
         st.markdown(f"**Last Glyph:** `{glyph_id}`")
@@ -35,7 +16,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("🧪 Run Sareth Self-Test")
-    if st.button("Run Sareth Test"):
+    if st.button("Run Sareth Test", key="sareth_test_btn"):
         result = run_sareth_test()
         st.success(result)
 
@@ -46,7 +27,7 @@ st.subheader("🧠 Converse with Sareth (Recursive Agent)")
 if "sareth_agent" not in st.session_state:
     st.session_state.sareth_agent = Sareth()
 
-chat_input = st.chat_input("Enter a recursive reflection...")
+chat_input = st.chat_input("Enter a recursive reflection...", key="chat_input_key")
 if chat_input:
     with st.chat_message("user"):
         st.markdown(chat_input)
@@ -58,6 +39,7 @@ if chat_input:
     for memory in st.session_state.sareth_agent.memory[-5:]:
         st.markdown(f"**You** → {memory.get('input', '(missing input)')}")
         st.markdown(f"  **Sareth** → {memory.get('recursion_trace', ['(no trace)'])[-1]}")
+
 
 
 
