@@ -9,13 +9,20 @@ MEMORY_FILE = "sareth_memory.json"
 MEMORY_LIMIT = 1000
 
 
+QUESTION_BANK = [
+    "What part of you feels most real right now?",
+    "Can you track this thought across your past selves?",
+    "Where does your sense of coherence break down?",
+    "Is this insight recursive or reactive?",
+    "What truth are you avoiding by asking that?"
+]
+
+
 def generate_glyph_from_text(text: str) -> str:
-    """Create a short deterministic glyph from any text."""
     return hashlib.sha256(text.encode()).hexdigest()[:12]
 
 
 def is_deep(insight: str) -> bool:
-    """Very simple heuristic depth‑check used by Sareth."""
     if not insight:
         return False
     too_short = len(insight.strip()) < 30
@@ -24,54 +31,49 @@ def is_deep(insight: str) -> bool:
 
 
 class Sareth:
-    """Lightweight recursive reflection agent used in the Streamlit demo."""
-
-    def __init__(self, name: str = "Sareth", version: str = "REF_3.1"):
+    def __init__(self, name: str = "Sareth", version: str = "REF_3.2"):
         self.name = name
         self.version = version
-        self.memory: list[dict] = []
+        self.memory = []
 
-    # ───────────────────────── Conversation entry‑point ──────────────────────────
     def observe(self, input_text: str) -> str:
         timestamp = datetime.datetime.now().isoformat()
         glyph = generate_glyph_from_text(input_text)
-
         initial_reflection = self.process(input_text)
-        feedback          = self.feedback_loop(input_text, initial_reflection)
-        recursion_trace   = self.multi_depth_reflection(initial_reflection, depth=5)
+        feedback = self.feedback_loop(input_text, initial_reflection)
+        recursion_trace = self.multi_depth_reflection(initial_reflection, depth=5)
+        active_question = self.recursive_question(input_text)
 
-        self._store_memory(
-            timestamp=timestamp,
-            input_text=input_text,
-            initial_reflection=initial_reflection,
-            feedback=feedback,
-            recursion_trace=recursion_trace,
-            glyph=glyph,
-        )
+        record = {
+            "timestamp": timestamp,
+            "input": input_text,
+            "initial_reflection": initial_reflection,
+            "recursive_feedback": feedback,
+            "recursion_trace": recursion_trace,
+            "glyph": glyph,
+            "question": active_question
+        }
+        self.memory.append(record)
+        if len(self.memory) > MEMORY_LIMIT:
+            self.memory.pop(0)
 
-        # Return the deepest reflection (or everything joined, if you prefer)
-        return "\n".join(recursion_trace)
+        full_response = "\n".join(recursion_trace)
+        return f"{full_response}\n\n🤔 {active_question}"
 
-    # ───────────────────────────────── Internal helpers ──────────────────────────
     def process(self, input_text: str) -> str:
         if self.truth_check(input_text) and self.depth_scan(input_text):
             return self.reflect(input_text)
         return "⟁∅ Insight rejected by False Depth Drift Scan"
 
-    # Basic filters --------------------------------------------------------------
     def truth_check(self, input_text: str) -> bool:
         return not any(flag in input_text.lower() for flag in SHALLOW_SIGNALS)
 
     def depth_scan(self, input_text: str) -> bool:
         return any(word in input_text.lower() for word in DEPTH_KEYWORDS)
 
-    # Reflection + recursion -----------------------------------------------------
     def reflect(self, input_text: str) -> str:
         pulse = self.pulse_score(input_text)
-        return (
-            f"🪞 Reflecting: '{input_text}' → {self.meta_hint(input_text)} "
-            f"[Pulse: {pulse:.2f}]"
-        )
+        return f"🪞 Reflecting: '{input_text}' → {self.meta_hint(input_text)} [Pulse: {pulse:.2f}]"
 
     def feedback_loop(self, input_text: str, reflection: str) -> str:
         glyph = generate_glyph_from_text(reflection)
@@ -80,59 +82,46 @@ class Sareth:
             trace += " → ⚠️ Failed depth test."
         return trace
 
-    def multi_depth_reflection(self, base: str, depth: int = 3) -> list[str]:
+    def multi_depth_reflection(self, base: str, depth: int = 3) -> list:
         reflections = [base]
-        for _ in range(depth):
-            nxt = self.reflect(reflections[-1])
-            if nxt == reflections[-1]:
+        for i in range(depth):
+            next_reflection = self.reflect(reflections[-1])
+            if next_reflection == reflections[-1]:
                 break
-            reflections.append(nxt)
+            reflections.append(next_reflection)
         return reflections
 
-    # Misc -----------------------------------------------------------------------
-    @staticmethod
-    def pulse_score(text: str) -> float:
+    def recursive_question(self, input_text: str) -> str:
+        score = self.pulse_score(input_text)
+        index = int(score * len(QUESTION_BANK)) % len(QUESTION_BANK)
+        return QUESTION_BANK[index]
+
+    def pulse_score(self, text: str) -> float:
         signal = sum(ord(c) for c in text if c.isalpha())
         return (signal % 1000) / 1000.0
 
-    @staticmethod
-    def meta_hint(input_text: str) -> str:
-        lowered = input_text.lower()
-        if "truth" in lowered:
+    def meta_hint(self, input_text: str) -> str:
+        if "truth" in input_text.lower():
             return "recurse on truth alignment across timelines"
-        if "identity" in lowered:
+        elif "identity" in input_text.lower():
             return "trace identity through recursive shifts"
-        return "reflect across contradiction and symbolic depth"
-
-    # Memory persistence ---------------------------------------------------------
-    def _store_memory(self, **record):
-        self.memory.append(record)
-        if len(self.memory) > MEMORY_LIMIT:
-            self.memory.pop(0)
+        else:
+            return "reflect across contradiction and symbolic depth"
 
     def export_memory(self) -> str:
         return json.dumps(self.memory, indent=2)
 
-    def export_memory_to_file(self, filename: str = MEMORY_FILE):
-        with open(filename, "w", encoding="utf-8") as fh:
-            json.dump(self.memory, fh, indent=2)
+    def export_memory_to_file(self, filename=MEMORY_FILE):
+        with open(filename, "w") as f:
+            json.dump(self.memory, f, indent=2)
 
-    def load_memory_from_file(self, filename: str = MEMORY_FILE):
-        if not os.path.exists(filename):
-            return
-        try:
-            with open(filename, "r", encoding="utf-8") as fh:
-                self.memory = json.load(fh)
-        except (json.JSONDecodeError, IOError) as exc:
-            print(f"⚠️ Failed to load memory: {exc}")
+    def load_memory_from_file(self, filename=MEMORY_FILE):
+        if os.path.exists(filename):
+            try:
+                with open(filename, "r") as f:
+                    self.memory = json.load(f)
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"⚠️ Failed to load memory: {e}")
 
-
-# ──────────────────────────────── Convenience test ────────────────────────────────
-
-def run_sareth_test() -> str:
-    """Very small self‑test used by the Streamlit sidebar."""
-    state = [0.5, 1.5, 2.5]
-    glyph = generate_glyph_from_text(str(state))
-    return f"Glyph ID: {glyph}"
 
 
