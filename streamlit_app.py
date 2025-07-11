@@ -79,4 +79,8 @@ if __name__ == "__main__":
             with st.expander("📦 Memory Snapshot"):
                 for memory in st.session_state.sareth_agent.memory:
                     st.markdown(f"- `{memory['timestamp']}`: **You** → {memory['input']}")
-                    st.markdown(f"  **Sareth** → {memory['response']}")
+                    if 'response' in memory:
+    st.markdown(f"  **Sareth** → {memory['response']}")
+else:
+    st.markdown("  **Sareth** → (No response recorded yet)")
+
