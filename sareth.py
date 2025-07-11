@@ -1,26 +1,23 @@
 import os
 import json
 import datetime
+import hashlib
 
-# Detect if running in a Continuous Integration environment
 IS_CI = os.environ.get("CI") == "true"
 
-# Placeholder engine runner
+def generate_glyph_from_text(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()[:12]
 
 def run_sareth_engine(prompt: str) -> str:
-    """Basic engine stub for testing."""
     return f"🪞 Reflecting on: '{prompt}'"
 
-
 def is_deep(insight: str) -> bool:
-    """Check if output meets basic depth criteria."""
     if not insight:
         return False
     shallow_signals = ["it depends", "i'm not sure", "could be", "maybe", "just", "kind of"]
     too_short = len(insight.strip()) < 30
     vague = any(phrase in insight.lower() for phrase in shallow_signals)
     return not (too_short or vague)
-
 
 class Sareth:
     def __init__(self, name: str = "Sareth", version: str = "REF_1.0"):
@@ -30,10 +27,16 @@ class Sareth:
 
     def observe(self, input_text: str) -> str:
         timestamp = datetime.datetime.now().isoformat()
-        self.memory.append({"timestamp": timestamp, "input": input_text})
-        response = self.process(input_text)
-        self.memory[-1]["response"] = response
-        return response
+        glyph = generate_glyph_from_text(input_text)
+        reflection = self.process(input_text)
+        record = {
+            "timestamp": timestamp,
+            "input": input_text,
+            "response": reflection,
+            "glyph": glyph
+        }
+        self.memory.append(record)
+        return reflection
 
     def process(self, input_text: str) -> str:
         if self.truth_check(input_text) and self.depth_scan(input_text):
@@ -54,21 +57,14 @@ class Sareth:
     def export_memory(self) -> str:
         return json.dumps(self.memory, indent=2)
 
+    def export_memory_to_file(self, filename="sareth_memory.json"):
+        with open(filename, "w") as f:
+            json.dump(self.memory, f, indent=2)
 
-def main(prompt: str) -> str:
-    if prompt.lower() == "exit":
-        print("🧪 Test session complete. REF core exited successfully.")
-        return "exit"
-
-    output = run_sareth_engine(prompt)
-
-    if not is_deep(output):
-        print("⟁∅ Insight rejected by False Depth Drift Scan")
-        return "⟁∅ Insight rejected"
-
-    print(output)
-    return output
-
+    def load_memory_from_file(self, filename="sareth_memory.json"):
+        if os.path.exists(filename):
+            with open(filename, "r") as f:
+                self.memory = json.load(f)
 
 if __name__ == "__main__":
     agent = Sareth()
@@ -81,7 +77,6 @@ if __name__ == "__main__":
             break
         response = agent.observe(user_input)
         print("Sareth:", response)
-
 
 def run_sareth_test():
     state = [0.5, 1.5, 2.5]
