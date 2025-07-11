@@ -164,6 +164,10 @@ class Sareth:
             except (json.JSONDecodeError, IOError) as e:
                 print(f"⚠️ Failed to load memory: {e}")
 
+# Add test entry point for Streamlit integration
+def run_sareth_test():
+    return "Sareth core loaded successfully."
+
 
 
 
