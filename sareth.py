@@ -3,7 +3,12 @@ import json
 import datetime
 import hashlib
 import streamlit as st
-from main import run_recursive_engine
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+from ref_engine import run_recursive_engine  # moved to avoid circular imports
+
+nltk.download('vader_lexicon')
+sia = SentimentIntensityAnalyzer()
 
 IS_CI = os.environ.get("CI") == "true"
 
@@ -12,10 +17,8 @@ DEPTH_KEYWORDS = ["recursive", "across time", "paradox", "identity", "coherence"
 MEMORY_FILE = "sareth_memory.json"
 MEMORY_LIMIT = 1000
 
-
 def generate_glyph_from_text(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:12]
-
 
 def is_deep(insight: str) -> bool:
     if not insight:
@@ -24,9 +27,8 @@ def is_deep(insight: str) -> bool:
     vague = any(phrase in insight.lower() for phrase in SHALLOW_SIGNALS)
     return not (too_short or vague)
 
-
 class Sareth:
-    def __init__(self, name: str = "Sareth", version: str = "REF_3.0"):
+    def __init__(self, name: str = "Sareth", version: str = "REF_3.1"):
         self.name = name
         self.version = version
         self.memory = []
@@ -34,14 +36,14 @@ class Sareth:
     def observe(self, input_text: str) -> str:
         timestamp = datetime.datetime.now().isoformat()
         glyph = generate_glyph_from_text(input_text)
-        reflection = self.process(input_text)
-        feedback = self.feedback_loop(input_text, reflection)
-        recursion_trace = self.multi_depth_reflection(reflection, depth=3)
+        initial_reflection = self.process(input_text)
+        feedback = self.feedback_loop(input_text, initial_reflection)
+        recursion_trace = self.multi_depth_reflection(initial_reflection, depth=5)
 
         record = {
             "timestamp": timestamp,
             "input": input_text,
-            "initial_reflection": reflection,
+            "initial_reflection": initial_reflection,
             "recursive_feedback": feedback,
             "recursion_trace": recursion_trace,
             "glyph": glyph
@@ -50,7 +52,7 @@ class Sareth:
         if len(self.memory) > MEMORY_LIMIT:
             self.memory.pop(0)
 
-        return recursion_trace[-1] if recursion_trace else feedback
+        return "\n".join(recursion_trace)
 
     def process(self, input_text: str) -> str:
         if self.truth_check(input_text) and self.depth_scan(input_text):
@@ -65,36 +67,37 @@ class Sareth:
 
     def reflect(self, input_text: str) -> str:
         pulse = self.pulse_score(input_text)
-        return f"🪞 Reflecting on: '{input_text}' → {self.meta_hint(input_text)} [Pulse: {pulse:.2f}]"
+        return f"🪞 Reflecting: '{input_text}' → {self.meta_hint(input_text)} [Pulse: {pulse:.2f}]"
 
     def feedback_loop(self, input_text: str, reflection: str) -> str:
         glyph = generate_glyph_from_text(reflection)
-        trace = f"↪ Recursive Feedback: '{reflection}' → encoded as glyph {glyph}"
+        trace = f"↪ Feedback: '{reflection}' → glyph {glyph}"
         if not is_deep(reflection):
-            trace += " → ⚠️ Depth validation failed."
+            trace += " → ⚠️ Failed depth test."
         return trace
 
-    def multi_depth_reflection(self, base: str, depth: int = 2) -> list:
+    def multi_depth_reflection(self, base: str, depth: int = 3) -> list:
         reflections = [base]
         for i in range(depth):
-            last = reflections[-1]
-            next_reflection = self.reflect(last)
-            if next_reflection == last:
+            next_reflection = self.reflect(reflections[-1])
+            if next_reflection == reflections[-1]:
                 break
             reflections.append(next_reflection)
         return reflections
 
     def pulse_score(self, text: str) -> float:
-        signal = sum(ord(c) for c in text if c.isalpha())
-        return (signal % 1000) / 1000.0
+        sentiment = sia.polarity_scores(text)
+        composite = sentiment['compound']
+        normalized = (composite + 1) / 2  # scale -1 to 1 → 0 to 1
+        return normalized
 
     def meta_hint(self, input_text: str) -> str:
         if "truth" in input_text.lower():
-            return "consider its recursive alignment with inner and outer truths"
+            return "recurse on truth alignment across timelines"
         elif "identity" in input_text.lower():
-            return "track shifts in self-recognition across layers"
+            return "trace identity through recursive shifts"
         else:
-            return "extend this across time, contradiction, and self-reference"
+            return "reflect across contradiction and symbolic depth"
 
     def export_memory(self) -> str:
         return json.dumps(self.memory, indent=2)
@@ -110,7 +113,6 @@ class Sareth:
                     self.memory = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
                 print(f"⚠️ Failed to load memory: {e}")
-
 
 # Streamlit UI
 st.set_page_config(page_title="Sareth + REF Engine", layout="wide")
@@ -134,10 +136,13 @@ with st.sidebar:
         st.markdown(f"**Halt Reason:** `{reason}`")
 
 st.subheader("🧠 Converse with Sareth")
-prompt = st.text_input("Enter your prompt:", placeholder="Type something recursive, paradoxical, etc.")
-
-if st.button("📤 Submit to Sareth") and prompt:
-    response = agent.observe(prompt)
-    st.markdown(f"### Response:\n{response}")
+chat_input = st.chat_input("Type your recursive insight...")
+if chat_input:
+    response = agent.observe(chat_input)
+    with st.chat_message("user"):
+        st.markdown(chat_input)
+    with st.chat_message("Sareth"):
+        st.markdown(response)
     st.subheader("📚 Memory Snapshot")
     st.json(agent.memory[-5:] if len(agent.memory) > 5 else agent.memory)
+
