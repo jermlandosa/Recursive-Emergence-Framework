@@ -1,40 +1,17 @@
-# main.py
-
-from recursor import recursive_loop
+from recursor import Recursor
 from sareth import init_sareth
 from glyph_engine import generate_glyph
 import time
 
 
 def run_recursive_engine():
-    """
-    Primary interface function for Sareth to be called from Streamlit or CLI.
-    Initializes Sareth, runs the recursive loop, and returns a summary string.
-    """
     init_sareth()
+    seed_state = [1.0, 2.0, 3.0]  # Or however you want to initialize it
 
-    depth = 0
-    max_depth = 1
-    state = [1.0, 2.0, 3.0]
+    recursor = Recursor(max_depth=10, tension_threshold=0.7)
+    final_state = recursor.run(seed_state)
+    final_glyph = generate_glyph(final_state)
 
-    while depth < max_depth:
-        print(f"[DEPTH {depth}] State: {state}")
-        glyph = generate_glyph(state)
-        print(f"[GLYPH] {glyph}")
-        
-        # Simulate engine's tension mechanism
-        tension = sum(state) / 10
-        print(f"[HALT] tension {tension:.3f} exceeded threshold at depth {depth}")
-        
-        # Optional: recursion loop
-        state = recursive_loop(state)
-        depth += 1
-        time.sleep(0.3)  # for readable output
+    return f"Recursive Engine complete.\nFinal State: {final_state}\nFinal Glyph: {final_glyph}"
 
-    return f"Recursive Engine completed. Final state: {state}, glyph: {glyph}"
-
-
-# Optional CLI trigger
-if __name__ == "__main__":
-    print(run_recursive_engine())
 
