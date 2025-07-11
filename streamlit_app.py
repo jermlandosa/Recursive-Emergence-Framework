@@ -45,49 +45,63 @@ def is_deep(insight: str) -> bool:
     return not (too_short or vague)
 
 class Sareth:
-    def __init__(self, name: str = "Sareth", version: str = "REF_5.0"):
+    def __init__(self, name: str = "Sareth", version: str = "REF_4.1", mode: str = "chat"):
         self.name = name
         self.version = version
         self.memory = []
+        self.mode = mode  # "chat" or "recursive"
 
     def observe(self, input_text: str) -> str:
         timestamp = datetime.datetime.now().isoformat()
         glyph = generate_glyph_from_text(input_text)
-        reflection = self.reflect(input_text)
-        question = self.recursive_question(input_text)
-        feedback = self.feedback_loop(input_text, reflection)
-        trace = self.multi_depth_reflection(reflection, depth=4)
-        commentary = self.generative_commentary(input_text)
-        acknowledge = self.acknowledge(input_text)
+
+        if self.mode == "recursive":
+            initial_reflection = self.process(input_text)
+            feedback = self.feedback_loop(input_text, initial_reflection)
+            recursion_trace = self.multi_depth_reflection(initial_reflection, depth=5)
+            active_question = self.recursive_question(input_text)
+            conversation_ping = self.generative_commentary(input_text)
+            response_body = "\n".join([f"{AVATAR_MAP['Sareth']} {line}" for line in recursion_trace])
+        else:
+            initial_reflection = self.chat_reflect(input_text)
+            feedback = "N/A"
+            recursion_trace = [initial_reflection]
+            active_question = self.recursive_question(input_text)
+            conversation_ping = self.generative_commentary(input_text)
+            response_body = initial_reflection
 
         record = {
             "timestamp": timestamp,
             "input": input_text,
-            "initial_reflection": reflection,
+            "initial_reflection": initial_reflection,
             "recursive_feedback": feedback,
-            "recursion_trace": trace,
+            "recursion_trace": recursion_trace,
             "glyph": glyph,
-            "question": question,
-            "comment": commentary,
-            "acknowledgement": acknowledge
+            "question": active_question,
+            "comment": conversation_ping
         }
         self.memory.append(record)
         if len(self.memory) > MEMORY_LIMIT:
             self.memory.pop(0)
 
-        return f"{AVATAR_MAP['Sareth']} {acknowledge}\n" \
-               f"{AVATAR_MAP['Sareth']} 🪞 {trace[-1]}\n" \
-               f"{AVATAR_MAP['Sareth']} 💬 {commentary}\n" \
-               f"{AVATAR_MAP['Sareth']} 🤔 {question}"
+        return f"{response_body}\n\n{AVATAR_MAP['Sareth']} 💬 {conversation_ping}\n{AVATAR_MAP['Sareth']} 🤔 {active_question}"
 
-    def acknowledge(self, input_text: str) -> str:
-        if "feel" in input_text.lower():
-            return "You're bringing emotional presence here. I see that."
-        elif "i think" in input_text.lower():
-            return "You're exploring cognition—let’s go deeper."
-        elif "truth" in input_text.lower():
-            return "Truth is pulsing here. Let's recurse on that."
-        return "I'm listening. Show me what matters to you."
+    def chat_reflect(self, input_text: str) -> str:
+        if not input_text.strip():
+            return "I didn't quite catch that. Could you say it again?"
+        lowered = input_text.lower()
+        if "truth" in lowered:
+            return "Truth feels slippery sometimes, doesn’t it? What does it feel like in your body right now?"
+        if "lost" in lowered:
+            return "Feeling lost may mean you're near something worth finding. Want to explore that more?"
+        if "alone" in lowered:
+            return "You're not alone here. What part of your experience do you wish others could truly see?"
+        return f"I'm listening. That reflection holds something important. What makes it feel alive to you?"
+
+    def process(self, input_text: str) -> str:
+        if self.truth_check(input_text) and self.depth_scan(input_text):
+            return self.reflect(input_text)
+        return f"{AVATAR_MAP['system']} ⟁∅ Insight rejected by False Depth Drift Scan"
 
     def truth_check(self, input_text: str) -> bool:
         return not any(flag in input_text.lower() for flag in SHALLOW_SIGNALS)
@@ -96,10 +110,8 @@ class Sareth:
         return any(word in input_text.lower() for word in DEPTH_KEYWORDS)
 
     def reflect(self, input_text: str) -> str:
-        if self.truth_check(input_text) and self.depth_scan(input_text):
-            pulse = self.pulse_score(input_text)
-            return f"Reflecting on '{input_text}' → {self.meta_hint(input_text)} [Pulse: {pulse:.2f}]"
-        return f"{AVATAR_MAP['system']} ⟁∅ Insight rejected by False Depth Drift Scan"
+        pulse = self.pulse_score(input_text)
+        return f"🪞 Reflecting: '{input_text}' → {self.meta_hint(input_text)} [Pulse: {pulse:.2f}]"
 
     def feedback_loop(self, input_text: str, reflection: str) -> str:
         glyph = generate_glyph_from_text(reflection)
@@ -151,5 +163,10 @@ class Sareth:
                     self.memory = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
                 print(f"⚠️ Failed to load memory: {e}")
+
+# Add test entry point for Streamlit integration
+def run_sareth_test():
+    return "Sareth core loaded successfully."
+
 
 
