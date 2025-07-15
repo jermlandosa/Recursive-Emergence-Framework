@@ -5,6 +5,7 @@ import OnboardingPrompts from './components/OnboardingPrompts';
 import InteractionHub from './components/InteractionHub';
 import TruthCoreReveal from './components/TruthCoreReveal';
 import MetaLayerView from './components/MetaLayerView';
+import InfoSidebar from './components/InfoSidebar';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/interaction" element={<InteractionHub />} />
         <Route path="/truth-core" element={<TruthCoreReveal />} />
         <Route path="/meta-layer" element={<MetaLayerView />} />
+        <Route path="/learn" element={<InfoSidebar />} />
       </Routes>
     </Router>
   );
