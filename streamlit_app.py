@@ -8,7 +8,8 @@ import random
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 
-openai.api_key = st.secrets["openai"]["api_key"]
+# Initialize OpenAI client for API v1.x
+client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
 if "conversation" not in st.session_state:
     st.session_state.conversation = []
@@ -47,12 +48,12 @@ def sareth_gpt_response(conversation_history):
         role = "user" if speaker == "You" else "assistant"
         messages.append({"role": role, "content": text})
 
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=messages,
         temperature=0.7
     )
-    return response.choices[0].message['content']
+    return response.choices[0].content  # Updated to .content instead of .message.content
 
 def derive_glyph(user_input):
     engine = Recursor(max_depth=10, tension_threshold=0.7)
@@ -99,6 +100,7 @@ def process_reflection():
     full_response = f"{sareth_response}\n\n*Symbolic Marker:* {glyph_display} _(at {timestamp})_"
     st.session_state.conversation.append(("Sareth", full_response))
     st.session_state.user_input = ""
+
 
 # --- UI ---
 
