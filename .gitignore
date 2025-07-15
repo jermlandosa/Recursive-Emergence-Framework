@@ -1,5 +1,5 @@
-__pycache__/
-*.pyc
+**/__pycache__/
+*.py[cod]
 **/.pytest_cache/
 node_modules/
 frontend/dist/
