@@ -5,6 +5,7 @@ from test_tools import run_sareth_test
 from datetime import datetime
 from collections import Counter
 import random
+import re
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 
@@ -41,11 +42,20 @@ reflection_prompts = [
     "When did you last feel deeply aligned with yourself?"
 ]
 
+def sanitize_text(text):
+    # Remove markdown, timestamps, separators
+    text = re.sub(r"_\(at .*\)_", "", text)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"_([^_]+)_", r"\1", text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    text = text.replace("---", "").strip()
+    return text
+
 def sareth_gpt_response(conversation_history):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for speaker, text in conversation_history:
         role = "user" if speaker == "You" else "assistant"
-        messages.append({"role": role, "content": text})
+        messages.append({"role": role, "content": sanitize_text(text)})
 
     response = client.chat.completions.create(
         model="gpt-4",
@@ -63,14 +73,26 @@ def should_surface_glyph(conversation_history):
         )
     }
 
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + conversation_history + [significance_check_prompt]
+    recent_history = conversation_history[-6:]  # Limit to last 6 messages
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=messages,
-        temperature=0
-    )
-    return response.choices[0].message.content.strip().lower() == "yes"
+    for speaker, text in recent_history:
+        role = "user" if speaker == "You" else "assistant"
+        sanitized = sanitize_text(text)
+        messages.append({"role": role, "content": sanitized})
+
+    messages.append(significance_check_prompt)
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0
+        )
+        return response.choices[0].message.content.strip().lower() == "yes"
+    except Exception as e:
+        st.error(f"API Error during glyph significance check:\n\n{e}")
+        return False
 
 def derive_glyph(user_input):
     engine = Recursor(max_depth=10, tension_threshold=0.7)
