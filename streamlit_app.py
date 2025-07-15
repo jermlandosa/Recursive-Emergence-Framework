@@ -2,10 +2,13 @@ import streamlit as st
 import openai
 from recursor import Recursor
 from test_tools import run_sareth_test
+from datetime import datetime
+from collections import Counter
+import random
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 
-client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
+openai.api_key = st.secrets["openai"]["api_key"]
 
 if "conversation" not in st.session_state:
     st.session_state.conversation = []
@@ -30,18 +33,26 @@ You help users reflect deeply on their thoughts, emotions, and identity by uncov
 Always guide the user to deeper understanding with warmth, insight, and philosophical depth.
 """
 
+reflection_prompts = [
+    "What belief have you questioned lately?",
+    "Describe a recent emotional trigger and why it surfaced.",
+    "What recurring thought keeps visiting your mind?",
+    "What is something you're avoiding reflecting on?",
+    "When did you last feel deeply aligned with yourself?"
+]
+
 def sareth_gpt_response(conversation_history):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for speaker, text in conversation_history:
         role = "user" if speaker == "You" else "assistant"
         messages.append({"role": role, "content": text})
 
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=messages,
         temperature=0.7
     )
-    return response.choices[0].message.content
+    return response.choices[0].message['content']
 
 def derive_glyph(user_input):
     engine = Recursor(max_depth=10, tension_threshold=0.7)
@@ -73,22 +84,21 @@ def compute_truth_core():
         return "None yet"
     return max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
 
-# Reflection action
 def process_reflection():
     user_input = st.session_state.user_input.strip()
     if not user_input:
         return
-    st.session_state.conversation.append(("You", user_input))
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
     sareth_response = sareth_gpt_response(st.session_state.conversation)
 
     glyph_code = derive_glyph(user_input)
     glyph_display = translate_glyph(glyph_code)
     st.session_state.glyph_trace.append(glyph_display)
 
-    full_response = f"{sareth_response}\n\n*Symbolic Marker:* {glyph_display}"
+    full_response = f"{sareth_response}\n\n*Symbolic Marker:* {glyph_display} _(at {timestamp})_"
     st.session_state.conversation.append(("Sareth", full_response))
-    st.session_state.user_input = ""  # clear input field
-
+    st.session_state.user_input = ""
 
 # --- UI ---
 
@@ -102,15 +112,37 @@ st.text_input(
     on_change=process_reflection
 )
 
-st.button("Reflect with Sareth", on_click=process_reflection)
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.button("Reflect with Sareth", on_click=process_reflection)
+with col2:
+    if st.button("🎲 Generate Reflection Prompt"):
+        st.info(random.choice(reflection_prompts))
+with col3:
+    if st.button("🔄 Reset Conversation"):
+        st.session_state.conversation = []
+        st.session_state.glyph_trace = []
+        st.session_state.user_input = ""
+        st.success("Conversation reset!")
 
-# ✅ Always display full conversation
 st.subheader("📜 Conversation History")
 for speaker, text in st.session_state.conversation:
     st.markdown(f"**{speaker}:** {text}")
+st.markdown("---")
+
+st.subheader("🧿 Last Symbolic Marker")
+if st.session_state.glyph_trace:
+    st.markdown(f"**{st.session_state.glyph_trace[-1]}**")
+else:
+    st.markdown("_None yet_")
 
 st.subheader("💎 Truth Core")
 st.markdown(f"**Current Truth Core:** {compute_truth_core()}")
+
+st.subheader("📊 Glyph Frequency Summary")
+glyph_counts = Counter(st.session_state.glyph_trace)
+for glyph, count in glyph_counts.items():
+    st.markdown(f"**{glyph}**: {count} times")
 
 with st.expander("📜 Glyph Meaning Glossary"):
     for code, (symbol, meaning) in GLYPH_MAP.items():
