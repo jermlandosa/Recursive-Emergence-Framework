@@ -6,6 +6,7 @@ try:
 except ImportError:  # pragma: no cover - fallback when numpy unavailable
     np = None
 
+
 class Evaluator:
     def recurse(self, state, memory):
         """Evolve the given state (placeholder logic)."""
@@ -21,7 +22,7 @@ class Evaluator:
 
         mean = sum(state) / len(state)
         variance = sum((x - mean) ** 2 for x in state) / len(state)
-        std = variance ** 0.5
+        std = variance**0.5
         return std / (mean + 1e-9)
 
     def has_converged(self, prev, curr, threshold: float = 0.001) -> bool:

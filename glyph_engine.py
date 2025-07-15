@@ -2,13 +2,15 @@
 import hashlib
 import json
 
+
 class GlyphEngine:
     """
     Creates a short, human-readable hash (“glyph”) of each recursion state.
     This lets you track state-to-state evolution symbolically.
     """
+
     def __init__(self):
-        self._trace = []          # [(depth, glyph), …]
+        self._trace = []  # [(depth, glyph), …]
 
     def generate(self, state, depth: int) -> str:
         state_str = json.dumps(state, sort_keys=True)

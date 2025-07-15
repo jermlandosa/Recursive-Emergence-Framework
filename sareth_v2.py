@@ -4,6 +4,7 @@ import json
 
 IS_CI = os.environ.get("CI") == "true"
 
+
 class SarethV2:
     def __init__(self, version="REF_v2.0"):
         self.version = version
@@ -11,7 +12,7 @@ class SarethV2:
         self.protocols = {
             "truth_rich_recursion": self.truth_rich_recursion,
             "depth_integrity_scan": self.depth_integrity_scan,
-            "identity_drift_check": self.identity_drift_check
+            "identity_drift_check": self.identity_drift_check,
         }
 
     def observe(self, input_text):
@@ -19,8 +20,12 @@ class SarethV2:
         record = {"timestamp": timestamp, "input": input_text}
 
         if self.identity_drift_check(input_text):
-            record["response"] = "⚠️ Identity drift detected. Re-center on structure, not self."
-        elif self.truth_rich_recursion(input_text) and self.depth_integrity_scan(input_text):
+            record[
+                "response"
+            ] = "⚠️ Identity drift detected. Re-center on structure, not self."
+        elif self.truth_rich_recursion(input_text) and self.depth_integrity_scan(
+            input_text
+        ):
             record["response"] = self.reflect(input_text)
         else:
             record["response"] = "⟁∅ Rejected – failed recursion or depth test."
@@ -76,4 +81,3 @@ if __name__ == "__main__":
             continue
         response = agent.observe(user_input)
         print("Sareth:", response)
-
