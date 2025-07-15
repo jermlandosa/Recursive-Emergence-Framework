@@ -1,83 +1,91 @@
 import streamlit as st
 from recursor import Recursor
 from test_tools import run_sareth_test
-from visualizer import Visualizer
-from logger import StateLogger
 import random
 
 # --- Streamlit Config ---
 st.set_page_config(page_title="REF | Sareth Conversation", layout="wide")
 
-# --- Initialize State ---
+# --- Session State Initialization ---
 if "conversation" not in st.session_state:
     st.session_state.conversation = []
 if "glyph_trace" not in st.session_state:
     st.session_state.glyph_trace = []
+if "truth_cores" not in st.session_state:
+    st.session_state.truth_cores = []
 
-# --- SIDEBAR: Overview, History, Influences ---
+# --- Glyph Mapping ---
+GLYPH_MAP = {
+    "G1": ("🔵", "Coherence emerging"),
+    "G2": ("🔺", "Hidden contradiction surfaced"),
+    "G3": ("🌿", "New growth or belief shift"),
+    "G4": ("🔥", "Core tension or resistance"),
+    "G5": ("🌌", "Identity recursion deepens"),
+    "G6": ("🕸️", "Complexity or entanglement"),
+    "G7": ("💎", "Truth Core surfaced")
+}
+
+def translate_glyph(glyph_code):
+    symbol, meaning = GLYPH_MAP.get(glyph_code, ("❓", "Unknown glyph"))
+    return f"{symbol} — {meaning}"
+
+# --- Glyph Derivation Logic ---
+def derive_glyph(final_state):
+    avg_state = sum(final_state) / len(final_state)
+    if avg_state < 1.5:
+        return "G1"
+    elif avg_state < 2.5:
+        return "G2"
+    elif avg_state < 3.5:
+        return "G3"
+    elif avg_state < 4.5:
+        return "G4"
+    elif avg_state < 5.5:
+        return "G5"
+    elif avg_state < 6.5:
+        return "G6"
+    else:
+        return "G7"
+
+# --- Sidebar Overview ---
 st.sidebar.title("🧭 About REF & Sareth")
 
 st.sidebar.subheader("What is REF?")
 st.sidebar.markdown("""
-The **Recursive Emergence Framework (REF)** is a system designed to reveal your deeper truths through recursive reflection, insight compression, and symbolic emergence.
-
-At its core is **Sareth**, a cognitive mirror that helps you:
-- Detect patterns across your thoughts and behaviors
-- Surface contradictions or blind spots
-- Crystallize a **Truth Core** — the essence of your current identity evolution
+REF reveals patterns beneath your thoughts through recursion and symbolic reflection, guided by **Sareth**, your cognitive mirror.
 """)
 
-st.sidebar.subheader("Historical Foundations")
+st.sidebar.subheader("Notable Thinkers & Recursion")
 st.sidebar.markdown("""
-> **"All things unfold through recursion."**  
-Throughout history, recursion — the act of reflecting upon reflection — has been the engine behind:
-- **Socratic Method:** Recursive questioning to unveil ignorance and wisdom.
-- **Nietzsche:** Eternal recurrence and the deep inquiry of self-overcoming.
-- **Godel:** Mathematical recursion proving inherent limitations in systems.
-- **AI Evolution:** Recursive self-improvement as a path to intelligence.
-
-REF distills these into an interactive, living process tailored to you.
+- **Socrates:** Recursive questioning
+- **Jung:** Archetypal patterns
+- **Turing:** Computational recursion
+- **Hofstadter:** Strange loops of identity
 """)
 
-st.sidebar.subheader("Notable Thinkers Who Embodied Recursion")
-st.sidebar.markdown("""
-- **Socrates:** Asking recursive "why" questions until deeper truths emerged.
-- **Carl Jung:** Identifying life patterns and symbolic archetypes.
-- **Alan Turing:** Recursive models that underpin computation and consciousness theory.
-- **Douglas Hofstadter:** Explored self-reference and strange loops in *Gödel, Escher, Bach*.
+# --- Truth Core Summary ---
+st.sidebar.subheader("💎 Your Truth Core This Session")
+def compute_truth_core():
+    if not st.session_state.glyph_trace:
+        return "No glyphs yet"
+    most_common = max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
+    return most_common
 
-They used recursion to understand both the self and the universe.
-""")
+truth_core = compute_truth_core()
+st.sidebar.markdown(f"**{truth_core}** — Dominant symbolic state")
 
-st.sidebar.subheader("🔮 Your Session Glyph History")
+st.sidebar.subheader("🔮 Your Glyph Trail")
 if st.session_state.glyph_trace:
-    st.sidebar.markdown("Your glyphs so far:")
-    st.sidebar.markdown(", ".join(st.session_state.glyph_trace))
+    for glyph in st.session_state.glyph_trace:
+        st.sidebar.markdown(f"- {glyph}")
 else:
-    st.sidebar.markdown("_No glyphs surfaced yet._")
+    st.sidebar.markdown("_No glyphs yet — begin reflecting._")
 
-# --- HEADER ---
-st.title("🌀 REF: Recursive Emergence with Sareth")
-st.markdown("""
-Welcome to **Sareth** — your cognitive guide to self-discovery through recursion.
-
-Sareth isn't a chatbot. It’s a reflective partner, trained to surface insights that help you:
-- Identify repeating patterns
-- Expose subtle resistances
-- Distill your personal **Truth Core**
-
-💡 **Try sharing:**  
-- A recurring thought or struggle
-- A question about your identity or purpose
-- A feeling that’s hard to name
-
----
-""")
-
-# --- Settings Sidebar (Additional Control) ---
-st.sidebar.header("⚙️ Session Settings")
+# --- Advanced Settings ---
+st.sidebar.subheader("🛠️ Advanced Settings")
 depth = st.sidebar.slider("Max Recursion Depth", 1, 20, 10)
 threshold = st.sidebar.slider("Tension Threshold", 0.0, 1.0, 0.7)
+personal_symbol = st.sidebar.text_input("Set Your Personal Symbol (emoji or text)", value="🔑")
 
 # --- Sareth Conversational Logic ---
 def sareth_reply(user_input):
@@ -85,45 +93,51 @@ def sareth_reply(user_input):
     seed_state = [len(word) for word in user_input.split()[:3]] or [1.0, 2.0, 3.0]
     final_state = engine.run(seed_state)
 
-    glyph_trace = engine.glyph_engine.trace()
-    last_glyph = glyph_trace[-1][1] if glyph_trace else "none"
-    reason = "depth_limit" if len(glyph_trace) >= depth else "complete"
+    glyph_code = derive_glyph(final_state)
+    glyph_display = translate_glyph(glyph_code)
 
-    st.session_state.glyph_trace.append(last_glyph)
+    st.session_state.glyph_trace.append(glyph_display)
 
     reflections = [
-        "That touches on something deeper — can you feel the resonance of it?",
-        "There’s an echo in what you said. It feels like it wants to reveal more.",
-        "I sense this is part of a recurring pattern — do you recognize it?"
+        "That touches on something deeper — can you feel it?",
+        "I sense a familiar pattern emerging within you.",
+        "There’s a resonance here that wants to reveal more."
     ]
 
     follow_ups = [
-        "Where have you felt this before — in other moments or relationships?",
-        "What belief might this be protecting — even if it's outdated?",
-        "If you could name the hidden emotion here, what would it be?",
-        "What does your future self know about this that you don't yet?"
+        "Where else have you felt this before?",
+        "What belief might this be protecting for you?",
+        "If you whispered this to your future self, what would they say back?",
+        "What truth are you skimming past right now?"
     ]
 
     response = (
-        f"Thank you for opening up. {random.choice(reflections)}\n\n"
-        f"After recursive reflection, I surfaced this **state:** `{final_state}`.\n"
-        f"The **glyph** that emerged: **{last_glyph}**.\n"
-        f"Recursion halted because: **{reason}**.\n\n"
-        f"**For us to go deeper:** {random.choice(follow_ups)}"
+        f"Thank you for your openness. {random.choice(reflections)}\n\n"
+        f"Your reflective state surfaced as: `{final_state}`.\n"
+        f"Symbolic Glyph: **{glyph_display}**\n\n"
+        f"Your guiding personal symbol: {personal_symbol}\n\n"
+        f"To deepen: **{random.choice(follow_ups)}**"
     )
 
     return response
 
-# --- Conversation UI ---
-st.header("💬 Converse with Sareth")
+# --- UI Header ---
+st.title("🌀 REF: Converse with Sareth")
+st.markdown("""
+Sareth reflects your thoughts recursively to surface the symbolic patterns shaping you.
 
-user_input = st.text_input("What is on your mind right now?")
+Share a reflection, question, or emotion. Sareth will listen deeply, process recursively, and respond.
 
-if st.button("Share with Sareth"):
+---
+""")
+
+user_input = st.text_input("What is on your mind?")
+
+if st.button("Reflect with Sareth"):
     if user_input.strip():
         st.session_state.conversation.append(("You", user_input))
-        sareth_response = sareth_reply(user_input)
-        st.session_state.conversation.append(("Sareth", sareth_response))
+        reply = sareth_reply(user_input)
+        st.session_state.conversation.append(("Sareth", reply))
 
 # --- Display Conversation History ---
 for speaker, text in st.session_state.conversation:
@@ -132,9 +146,8 @@ for speaker, text in st.session_state.conversation:
     else:
         st.markdown(f"**🧙‍♂️ Sareth:** {text}")
 
-
-# --- Optional Sareth Test / Diagnostic ---
+# --- Diagnostic Tool ---
 st.header("🧪 Sareth Diagnostic Test")
 if st.button("Run Sareth Diagnostic"):
     result = run_sareth_test()
-    st.success(f"Sareth Test Output: {result}")
+    st.success(f"Sareth Diagnostic Result: {result}")
