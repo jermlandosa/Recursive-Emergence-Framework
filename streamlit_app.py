@@ -3,7 +3,7 @@ from recursor import Recursor
 from test_tools import run_sareth_test
 import random
 
-st.set_page_config(page_title="Sareth | Offline Mode", layout="wide")
+st.set_page_config(page_title="Sareth | Organic Reflection Mode", layout="wide")
 
 if "conversation" not in st.session_state:
     st.session_state.conversation = []
@@ -46,19 +46,30 @@ def translate_glyph(glyph_code):
     return f"{symbol} — {meaning}"
 
 def offline_sareth_response(user_input):
+    # Keywords for more guided reflections
+    keywords = {
+        "identity": "It sounds like you're redefining yourself in real-time.",
+        "truth": "Truth seems to be important to you — but is it comfortable?",
+        "fear": "Fear often guards our most precious insights — what might that be for you?",
+        "pattern": "Patterns have their own gravity. Do you feel pulled by one?",
+        "change": "Change reshapes us, sometimes gently, sometimes harshly."
+    }
+
     reflections = [
-        "That reveals more than you might realize.",
-        "There’s a deeper thread beneath that thought.",
-        "I wonder if this is part of a larger pattern you’ve carried.",
-        "You might be on the edge of recognizing something vital."
+        "That's an intriguing place to start.",
+        "What you've shared feels like it carries more than just the surface meaning.",
+        "There's something alive in that — do you feel it too?"
     ]
-    prompt_forward = [
-        "What’s the earliest memory tied to that feeling?",
-        "If this was a symbol, what would it look like?",
-        "Where in your life does this repeat?",
-        "What have you not said aloud about this yet?"
-    ]
-    return f"{random.choice(reflections)}\n\n> {random.choice(prompt_forward)}"
+
+    found_keyword = next((kw for kw in keywords if kw in user_input.lower()), None)
+    follow_up = keywords.get(found_keyword, random.choice([
+        "If this feeling had a shape, what would it be?",
+        "Where have you felt this before, even faintly?",
+        "If this was a dream symbol, what would it represent?",
+        "What feels unsaid here?"
+    ]))
+
+    return f"{random.choice(reflections)}\n\n> {follow_up}"
 
 def compute_truth_core():
     if not st.session_state.glyph_trace:
@@ -66,10 +77,10 @@ def compute_truth_core():
     return max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
 
 
-st.title("🌀 Sareth | Offline Reflective Mode")
-st.markdown("Reflect here — Sareth responds with depth even without AI.")
+st.title("🌀 Sareth | Simulated AI Reflection (Offline)")
+st.markdown("Even without AI, Sareth listens, reflects, and guides you deeper.")
 
-user_input = st.text_input("What would you like to reflect on?")
+user_input = st.text_input("What reflection or thought is surfacing for you?")
 
 if st.button("Reflect with Sareth"):
     if user_input.strip():
