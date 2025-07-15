@@ -64,3 +64,24 @@ kubectl apply -f k8s/ingress.yaml
 
 Trigger deployment: Added test commit to README
 
+
+## 🌐 Frontend & Backend
+The `frontend` directory contains a React implementation of the REF onboarding screens and interaction hub. The `backend` directory exposes an Express API for saving onboarding responses and performing simple recursion processing.
+
+Run the backend with:
+
+```bash
+cd backend
+npm install
+npm start
+```
+
+Run the frontend with:
+
+```bash
+cd frontend
+npm install
+npm start
+```
+
+This launches the interface at `http://localhost:8080` by default.
