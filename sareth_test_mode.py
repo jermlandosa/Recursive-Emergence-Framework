@@ -8,8 +8,9 @@ test_prompts = [
     "Explain recursion.",
     "What's the REF?",
     "What happens if I say exit?",
-    "exit"  # <- force stop at the end
+    "exit",  # <- force stop at the end
 ]
+
 
 def simulate_user_session():
     print("🧪 Starting REF test session (CI Mode)...\n")
@@ -37,6 +38,7 @@ def run_sareth_test() -> str:
         sys.stdout = original
 
     return buffer.getvalue()
+
 
 if __name__ == "__main__":
     simulate_user_session()

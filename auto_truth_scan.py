@@ -1,22 +1,26 @@
-
 # auto_truth_scan.py
 
 from difflib import SequenceMatcher
 
+
 def mirror_test(statement):
-    reversed_statement = ' '.join(statement.split()[::-1])
+    reversed_statement = " ".join(statement.split()[::-1])
     return f"Original: {statement}\nReversed: {reversed_statement}\n⚠️ Manual evaluation required."
+
 
 def inversion_test(statement):
     return f"What if the opposite were true?\n⚠️ Manually consider implications and contradictions."
 
+
 def fractal_test(statement, micro_example, macro_example):
     return f"Micro Context: {micro_example}\nMacro Context: {macro_example}\n⚠️ Compare behavior at both scales."
 
+
 def drift_test(statement):
-    repeated = ' '.join([statement] * 5)
+    repeated = " ".join([statement] * 5)
     ratio = SequenceMatcher(None, statement, repeated).ratio()
     return f"Drift Ratio (repetition stability): {ratio:.2f} — ⚠️ Below 1.0 indicates potential entropy."
+
 
 def anchor_echo_test(statement, symbols=[], actions=[], contradictions=[]):
     return (
@@ -26,10 +30,13 @@ def anchor_echo_test(statement, symbols=[], actions=[], contradictions=[]):
         "⚠️ Are they coherently aligned with the belief?"
     )
 
+
 # Example runner
-def run_truth_scan(statement, micro_example, macro_example, symbols, actions, contradictions):
+def run_truth_scan(
+    statement, micro_example, macro_example, symbols, actions, contradictions
+):
     print("🔍 Running Recursive Truth Scan")
-    print("="*40)
+    print("=" * 40)
     print("1. Mirror Test")
     print(mirror_test(statement))
     print("\n2. Inversion Test")
@@ -41,6 +48,7 @@ def run_truth_scan(statement, micro_example, macro_example, symbols, actions, co
     print("\n5. Anchor Echo Test")
     print(anchor_echo_test(statement, symbols, actions, contradictions))
 
+
 # Example usage:
 if __name__ == "__main__":
     statement = "People are only motivated by self-interest"
@@ -50,4 +58,6 @@ if __name__ == "__main__":
     actions = ["Acts of generosity", "Policy design"]
     contradictions = ["Altruism exists", "Collective sacrifice"]
 
-    run_truth_scan(statement, micro_example, macro_example, symbols, actions, contradictions)
+    run_truth_scan(
+        statement, micro_example, macro_example, symbols, actions, contradictions
+    )

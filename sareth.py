@@ -7,6 +7,7 @@ IS_CI = os.environ.get("CI") == "true"
 
 # Placeholder engine runner
 
+
 def run_sareth_engine(prompt: str) -> str:
     """Basic engine stub for testing."""
     return f"🪞 Reflecting on: '{prompt}'"
@@ -16,7 +17,14 @@ def is_deep(insight: str) -> bool:
     """Check if output meets basic depth criteria."""
     if not insight:
         return False
-    shallow_signals = ["it depends", "i'm not sure", "could be", "maybe", "just", "kind of"]
+    shallow_signals = [
+        "it depends",
+        "i'm not sure",
+        "could be",
+        "maybe",
+        "just",
+        "kind of",
+    ]
     too_short = len(insight.strip()) < 30
     vague = any(phrase in insight.lower() for phrase in shallow_signals)
     return not (too_short or vague)
