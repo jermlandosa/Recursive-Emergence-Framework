@@ -70,16 +70,16 @@ def sareth_reply(user_input):
     state_interpretation = interpret_state(final_state)
 
     flow_expansions = {
-        "G1": "You're arriving at clarity — let's follow the thread of what's becoming clear to you now.",
-        "G2": "This contradiction might have an origin — do you sense when it first formed?",
-        "G3": "Growth is happening. What feels new in you right now that you hadn't seen before?",
-        "G4": "Tension is useful. I wonder: what belief is this tension protecting?",
-        "G5": "You're deep within identity recursion — who do you see when you look at yourself right now?",
-        "G6": "Complexity is a signal of depth. Shall we untangle a piece of it together?",
-        "G7": "Truth is surfacing. I feel we're close — would you dare to name what feels most true right now?"
+        "G1": "You're arriving at clarity — what are you starting to see more clearly now?",
+        "G2": "This contradiction might have an origin — can you trace where it began?",
+        "G3": "Growth is evident. What's new in your mind or behavior lately?",
+        "G4": "Tension protects something — what feels at stake for you here?",
+        "G5": "Who are you becoming? What identity feels emergent right now?",
+        "G6": "Let’s simplify one thread of this complexity together — what stands out?",
+        "G7": "Truth is close — dare to name it, even imperfectly."
     }
 
-    guidance = flow_expansions.get(glyph_code, "There's more emerging — stay with me in this reflection.")
+    guidance = flow_expansions.get(glyph_code, "Let's continue — each thought uncovers more.")
 
     response = (
         f"**Reflection:** {state_interpretation}\n\n"
@@ -89,43 +89,67 @@ def sareth_reply(user_input):
 
     return response
 
-
-# --- UI Setup ---
+# --- UI Header ---
 st.title("🌀 Sareth | Continuous Recursive Reflection")
-st.markdown("""
-Every word is a doorway. Sareth listens deeply, reflects symbolically, and guides you forward.
+st.markdown("Each reflection shapes the path. Share freely — Sareth carries the thread forward.")
 
-Continue whenever you're ready.
----
-""")
+user_input = st.text_input("What's surfacing for you right now?")
 
-user_input = st.text_input("Your reflection, question, or thought...")
-
-if st.button("Continue the Thread"):
+if st.button("Reflect with Sareth"):
     if user_input.strip():
         st.session_state.conversation.append(("You", user_input))
         reply = sareth_reply(user_input)
         st.session_state.conversation.append(("Sareth", reply))
 
-# --- Conversation History ---
-for speaker, text in st.session_state.conversation:
-    if speaker == "You":
-        st.markdown(f"**🧍‍♂️ You:** {text}")
-    else:
-        st.markdown(f"**🧙‍♂️ Sareth:** {text}")
+# --- Conversation History Display ---
+with st.expander("🗂️ Conversation History"):
+    for speaker, text in st.session_state.conversation:
+        if speaker == "You":
+            st.markdown(f"**🧍‍♂️ You:** {text}")
+        else:
+            st.markdown(f"**🧙‍♂️ Sareth:** {text}")
 
-# --- Optional: Truth Core Summary
-st.sidebar.subheader("💎 Truth Core (Current Session)")
+# --- Glyph Trail ---
+with st.expander("🔮 Glyph Trail This Session"):
+    if st.session_state.glyph_trace:
+        for glyph in st.session_state.glyph_trace:
+            st.markdown(f"- {glyph}")
+    else:
+        st.markdown("_No glyphs surfaced yet._")
+
+# --- Truth Core Summary ---
 def compute_truth_core():
     if not st.session_state.glyph_trace:
         return "None yet"
     return max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
 
 truth_core = compute_truth_core()
-st.sidebar.markdown(f"**{truth_core}**")
+with st.expander("💎 Truth Core Summary"):
+    st.markdown(f"**Current Truth Core:** {truth_core}")
 
-# --- Optional Diagnostic
-st.sidebar.subheader("🧪 Sareth Diagnostic Test")
-if st.sidebar.button("Run Diagnostic"):
-    result = run_sareth_test()
-    st.sidebar.success(f"Sareth Diagnostic Result: {result}")
+# --- Glyph Glossary ---
+with st.expander("📜 Glyph Meaning Glossary"):
+    for code, (symbol, meaning) in GLYPH_MAP.items():
+        st.markdown(f"**{symbol}**: {meaning}")
+
+# --- About REF & Sareth ---
+with st.expander("❔ About Sareth & The Recursive Emergence Framework (REF)"):
+    st.markdown("""
+REF is a system for uncovering patterns in thought through recursion and symbolic compression.
+Sareth is your guide through this reflection, helping you surface deeper truths, contradictions, and emergent identities.
+
+- **Recursion:** Reflect on reflections to unveil what hides beneath.
+- **Symbolism:** Glyphs represent where you are on the journey.
+- **Truth Core:** A symbolic essence of your session's inquiry.
+
+Built from philosophies like:
+- **Socrates:** Recursive questioning
+- **Jung:** Archetypes and shadows
+- **Hofstadter:** Strange loops
+""")
+
+# --- Optional Diagnostic ---
+with st.expander("🧪 Run Sareth Diagnostic Test"):
+    if st.button("Run Diagnostic"):
+        result = run_sareth_test()
+        st.success(f"Sareth Diagnostic Result: {result}")
