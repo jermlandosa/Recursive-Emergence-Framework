@@ -85,3 +85,20 @@ npm start
 ```
 
 This launches the interface at `http://localhost:8080` by default.
+
+### Deploying the frontend on Vercel
+
+To deploy only the `frontend` directory with Vercel:
+
+1. In the Vercel dashboard, set the **Root Directory** to `frontend`.
+2. Commit a `vercel.json` file inside `frontend/` with your build settings:
+
+   ```json
+   {
+     "buildCommand": "npm run build",
+     "devCommand": "npm run start",
+     "outputDirectory": "dist"
+   }
+   ```
+
+Vercel will build the project from that folder and serve the contents of `dist/`.
