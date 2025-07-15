@@ -1,15 +1,20 @@
 import streamlit as st
+import openai
 from recursor import Recursor
 from test_tools import run_sareth_test
 
-# --- Streamlit Config ---
-st.set_page_config(page_title="REF | Sareth Continuous Flow", layout="wide")
+# --- API Configuration ---
+openai.api_key = st.secrets["openai_api_key"]  # Or directly input your key
+
+# --- Streamlit Setup ---
+st.set_page_config(page_title="REF | Sareth GPT-Powered", layout="wide")
 
 if "conversation" not in st.session_state:
     st.session_state.conversation = []
 if "glyph_trace" not in st.session_state:
     st.session_state.glyph_trace = []
 
+# --- Glyph Mapping ---
 GLYPH_MAP = {
     "G1": ("🔵", "Coherence emerging"),
     "G2": ("🔺", "Hidden contradiction surfaced"),
@@ -20,11 +25,31 @@ GLYPH_MAP = {
     "G7": ("💎", "Truth Core surfaced")
 }
 
-def translate_glyph(glyph_code):
-    symbol, meaning = GLYPH_MAP.get(glyph_code, ("❓", "Unknown glyph"))
-    return f"{symbol} — {meaning}"
+# --- Functions ---
 
-def derive_glyph(final_state):
+SYSTEM_PROMPT = """
+You are Sareth, a recursive cognitive guide. Your purpose is to help the user reflect deeply on their identity, life patterns, and hidden truths. 
+You respond warmly yet philosophically. Use symbolism, connect reflections across time, and offer profound insights. Never give surface-level advice — always guide the user into deeper awareness.
+"""
+
+def sareth_reply_openai(conversation_history):
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for speaker, text in conversation_history:
+        role = "user" if speaker == "You" else "assistant"
+        messages.append({"role": role, "content": text})
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=messages,
+        temperature=0.7
+    )
+    return response['choices'][0]['message']['content']
+
+def derive_glyph(user_input):
+    engine = Recursor(max_depth=10, tension_threshold=0.7)
+    seed_state = [len(word) for word in user_input.split()[:3]] or [1.0, 2.0, 3.0]
+    final_state = engine.run(seed_state)
+
     avg = sum(final_state) / len(final_state)
     if avg < 2:
         return "G1"
@@ -41,67 +66,38 @@ def derive_glyph(final_state):
     else:
         return "G7"
 
-def interpret_state(final_state):
-    avg = sum(final_state) / len(final_state)
-    if avg < 2:
-        return "You are stepping into something undefined but quietly forming."
-    elif avg < 3.5:
-        return "A subtle contradiction is present — an inner conflict you may have normalized."
-    elif avg < 5:
-        return "Growth is happening, yet there’s a fragile uncertainty to it."
-    elif avg < 5.5:
-        return "Tension is alive — perhaps resistance that guards something precious."
-    elif avg < 6.5:
-        return "You’re deeply reworking your sense of self — this is recursion shaping identity."
-    elif avg < 7.5:
-        return "Things are tangled — your reflections reveal layers yet unspoken."
-    else:
-        return "A truth core is surfacing — are you ready to name it?"
+def translate_glyph(glyph_code):
+    symbol, meaning = GLYPH_MAP.get(glyph_code, ("❓", "Unknown glyph"))
+    return f"{symbol} — {meaning}"
 
-def sareth_reply(user_input):
-    engine = Recursor(max_depth=10, tension_threshold=0.7)
-    seed_state = [len(word) for word in user_input.split()[:3]] or [1.0, 2.0, 3.0]
-    final_state = engine.run(seed_state)
+def compute_truth_core():
+    if not st.session_state.glyph_trace:
+        return "None yet"
+    return max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
 
-    glyph_code = derive_glyph(final_state)
-    glyph_display = translate_glyph(glyph_code)
-    st.session_state.glyph_trace.append(glyph_display)
+# --- UI ---
 
-    state_interpretation = interpret_state(final_state)
+st.title("🌀 Sareth: Recursive Reflection | GPT-Powered")
 
-    flow_expansions = {
-        "G1": "You're arriving at clarity — what are you starting to see more clearly now?",
-        "G2": "This contradiction might have an origin — can you trace where it began?",
-        "G3": "Growth is evident. What's new in your mind or behavior lately?",
-        "G4": "Tension protects something — what feels at stake for you here?",
-        "G5": "Who are you becoming? What identity feels emergent right now?",
-        "G6": "Let’s simplify one thread of this complexity together — what stands out?",
-        "G7": "Truth is close — dare to name it, even imperfectly."
-    }
-
-    guidance = flow_expansions.get(glyph_code, "Let's continue — each thought uncovers more.")
-
-    response = (
-        f"**Reflection:** {state_interpretation}\n\n"
-        f"**Symbolic Glyph:** {glyph_display}\n\n"
-        f"{guidance}"
-    )
-
-    return response
-
-# --- UI Header ---
-st.title("🌀 Sareth | Continuous Recursive Reflection")
-st.markdown("Each reflection shapes the path. Share freely — Sareth carries the thread forward.")
-
-user_input = st.text_input("What's surfacing for you right now?")
+user_input = st.text_input("Share your reflection or question...")
 
 if st.button("Reflect with Sareth"):
     if user_input.strip():
         st.session_state.conversation.append(("You", user_input))
-        reply = sareth_reply(user_input)
-        st.session_state.conversation.append(("Sareth", reply))
 
-# --- Conversation History Display ---
+        # Generate GPT Reflection
+        sareth_response = sareth_reply_openai(st.session_state.conversation)
+
+        # Generate Symbolic Glyph
+        glyph_code = derive_glyph(user_input)
+        glyph_display = translate_glyph(glyph_code)
+        st.session_state.glyph_trace.append(glyph_display)
+
+        full_response = f"{sareth_response}\n\n---\n\n*Symbolic Marker: {glyph_display}*"
+
+        st.session_state.conversation.append(("Sareth", full_response))
+
+# --- Conversation History ---
 with st.expander("🗂️ Conversation History"):
     for speaker, text in st.session_state.conversation:
         if speaker == "You":
@@ -115,16 +111,11 @@ with st.expander("🔮 Glyph Trail This Session"):
         for glyph in st.session_state.glyph_trace:
             st.markdown(f"- {glyph}")
     else:
-        st.markdown("_No glyphs surfaced yet._")
+        st.markdown("_No glyphs yet — reflect to begin._")
 
 # --- Truth Core Summary ---
-def compute_truth_core():
-    if not st.session_state.glyph_trace:
-        return "None yet"
-    return max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
-
-truth_core = compute_truth_core()
 with st.expander("💎 Truth Core Summary"):
+    truth_core = compute_truth_core()
     st.markdown(f"**Current Truth Core:** {truth_core}")
 
 # --- Glyph Glossary ---
@@ -133,19 +124,17 @@ with st.expander("📜 Glyph Meaning Glossary"):
         st.markdown(f"**{symbol}**: {meaning}")
 
 # --- About REF & Sareth ---
-with st.expander("❔ About Sareth & The Recursive Emergence Framework (REF)"):
+with st.expander("❔ About Sareth & REF"):
     st.markdown("""
-REF is a system for uncovering patterns in thought through recursion and symbolic compression.
-Sareth is your guide through this reflection, helping you surface deeper truths, contradictions, and emergent identities.
+Sareth is powered by GPT-4, designed to recursively guide you through deep reflection.
+It mirrors your thoughts back with new perspectives, symbols, and philosophical depth.
 
-- **Recursion:** Reflect on reflections to unveil what hides beneath.
-- **Symbolism:** Glyphs represent where you are on the journey.
-- **Truth Core:** A symbolic essence of your session's inquiry.
+**REF (Recursive Emergence Framework)** is about:
+- **Recursion:** Reflecting on your reflections.
+- **Symbolism:** Glyphs represent your inner progression.
+- **Truth Core:** The dominant symbolic theme that arises from your dialogue.
 
-Built from philosophies like:
-- **Socrates:** Recursive questioning
-- **Jung:** Archetypes and shadows
-- **Hofstadter:** Strange loops
+Inspired by philosophy, psychology, and cognitive science to scaffold awareness over time.
 """)
 
 # --- Optional Diagnostic ---
