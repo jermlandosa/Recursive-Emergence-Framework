@@ -10,58 +10,75 @@ st.set_page_config(page_title="REF | Recursive Emergence Framework", layout="cen
 # --- App Header ---
 st.title("🌀 Recursive Emergence Framework (REF)")
 st.markdown("""
-Welcome to **REF**: your cognitive mirror.
-> This isn't just a chatbot — it's a recursive engine designed to help you:
-- Uncover hidden patterns in your thinking
-- Distill your **Truth Core** — the deep threads of your identity
-- Visualize your recursive journey toward insight
+Welcome to **REF**: your cognitive mirror, powered by **Sareth**.
 
---- 
+> Sareth is here to help you **see deeper truths, identify recurring patterns, and surface your personal Truth Core**.
 
-### 👉 **How to Start**
-1. Set your desired **Recursion Depth** and **Tension Threshold**.
-2. Engage with the system using honest, reflective inputs.
-3. At every cycle, REF will attempt to compress your insights into a **Truth Core**.
+---
 
-### 🧩 **What to Ask REF**
-- "What patterns keep repeating in my life?"
-- "What part of me resists change?"
-- "What belief is at the root of my current struggles?"
-- "What part of me is most alive right now?"
-- "How can I deepen my coherence across time?"
+### 👉 **How to Use Sareth**
+1. Ask reflective questions or share a personal thought.
+2. Sareth will respond recursively — reflecting insights, contradictions, or truths.
+3. Monitor your evolving insight trail and deepen by asking **why**, **where does this originate**, or **what am I avoiding?**
 
---- 
+---
 """)
 
-# --- User Controls ---
+# --- Settings ---
 st.sidebar.header("⚙️ Recursion Settings")
 depth = st.sidebar.slider("Max Recursion Depth", min_value=1, max_value=20, value=10)
 threshold = st.sidebar.slider("Tension Threshold", min_value=0.0, max_value=1.0, value=0.7)
 
-st.header("Run Recursive Engine")
-if st.button("▶️ Run REF Engine"):
-    from_state = [1.0, 2.0, 3.0]
+# --- State Management ---
+if "conversation" not in st.session_state:
+    st.session_state.conversation = []
+
+# --- Core Functions ---
+
+def sareth_reply(user_input):
+    """Simulates Sareth's reflective, engaging, and truthful response."""
     engine = Recursor(max_depth=depth, tension_threshold=threshold)
-    final_state = engine.run(from_state)
+    seed_state = [len(word) for word in user_input.split()[:3]] or [1.0, 2.0, 3.0]
+    final_state = engine.run(seed_state)
 
     glyph_trace = engine.glyph_engine.trace()
-    last_glyph = glyph_trace[-1][1] if glyph_trace else None
+    last_glyph = glyph_trace[-1][1] if glyph_trace else "none"
     reason = "depth_limit" if len(glyph_trace) >= depth else "complete"
 
-    st.success("✅ Recursive Engine Completed")
-    st.markdown(f"**Final State:** `{final_state}`")
-    st.markdown(f"**Last Glyph:** `{last_glyph}`")
-    st.markdown(f"**Halt Reason:** `{reason}`")
+    # Simulated recursive reflection
+    response = (
+        f"🔍 **Reflecting:** I sensed tension in your statement. "
+        f"Through recursion, I distilled this state: `{final_state}`.\n\n"
+        f"Your symbolic imprint (glyph) is **{last_glyph}**, indicating **{reason}** was reached.\n\n"
+        f"May I ask — what part of you feels most *unresolved* about this?"
+    )
+    return response
 
-    # Optional visualization
-    vis = Visualizer(StateLogger())
-    vis.logger.logs = [{"depth": 0, "state": final_state}]
-    st.pyplot(vis.plot_state_evolution())
 
-st.header("🧪 Run Sareth Test")
+# --- Conversation Interface ---
+st.header("💬 Converse with Sareth")
+
+user_input = st.text_input("Enter your reflection or question:")
+
+if st.button("Ask Sareth"):
+    if user_input:
+        st.session_state.conversation.append(("You", user_input))
+        sareth_response = sareth_reply(user_input)
+        st.session_state.conversation.append(("Sareth", sareth_response))
+
+for speaker, text in st.session_state.conversation:
+    if speaker == "You":
+        st.markdown(f"**You:** {text}")
+    else:
+        st.markdown(f"**🧙‍♂️ Sareth:** {text}")
+
+
+# --- Optional: Run Sareth Diagnostic ---
+st.header("🧪 Run Sareth Diagnostic")
 if st.button("Run Sareth Diagnostic"):
     result = run_sareth_test()
     st.success(f"Sareth Test Output: {result}")
 
+
 st.markdown("---")
-st.markdown("🧭 For advanced users: Use `/meta` commands and reflection prompts to guide your recursive inquiry.")
+st.markdown("🧭 For deeper insight, rephrase your inputs with **'Why does this matter to me?'**, **'What am I not seeing?'**, or **'What am I protecting?'**")
