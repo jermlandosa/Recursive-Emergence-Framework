@@ -3,7 +3,7 @@ import openai
 from recursor import Recursor
 from test_tools import run_sareth_test
 
-st.set_page_config(page_title="Sareth | Guided Recursive Reflection", layout="wide")
+st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 
 client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
 
@@ -11,6 +11,8 @@ if "conversation" not in st.session_state:
     st.session_state.conversation = []
 if "glyph_trace" not in st.session_state:
     st.session_state.glyph_trace = []
+if "user_input" not in st.session_state:
+    st.session_state.user_input = ""
 
 GLYPH_MAP = {
     "G1": ("🔵", "Coherence emerging"),
@@ -71,67 +73,59 @@ def compute_truth_core():
         return "None yet"
     return max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
 
+# Reflection action
+def process_reflection():
+    user_input = st.session_state.user_input.strip()
+    if not user_input:
+        return
+    st.session_state.conversation.append(("You", user_input))
+    sareth_response = sareth_gpt_response(st.session_state.conversation)
+
+    glyph_code = derive_glyph(user_input)
+    glyph_display = translate_glyph(glyph_code)
+    st.session_state.glyph_trace.append(glyph_display)
+
+    full_response = f"{sareth_response}\n\n*Symbolic Marker:* {glyph_display}"
+    st.session_state.conversation.append(("Sareth", full_response))
+    st.session_state.user_input = ""  # clear input field
+
 
 # --- UI ---
 
-st.title("🌀 Welcome to Sareth | Your Recursive Reflection Guide")
+st.title("🌀 Sareth | Recursive Reflection")
 
-with st.expander("🔍 See How It Works (Example)"):
-    st.markdown("""
-**You:** Why do I always doubt myself even when things go well?
+st.markdown("Share a reflection, question, or thought. Press **Enter** or click **Reflect with Sareth** to continue your journey.")
 
-**Sareth:** It sounds like there's an old belief still operating quietly in you — one that whispers you're not yet enough. Often, these traces persist even as we grow. I wonder, when did you first notice this voice of doubt?
+st.text_input(
+    "Your reflection:",
+    key="user_input",
+    on_change=process_reflection
+)
 
-**Symbolic Marker:** 🔺 — Hidden contradiction surfaced
-""")
+st.button("Reflect with Sareth", on_click=process_reflection)
 
-st.markdown("Whenever you're ready, share a reflection, thought, or question. Sareth will guide you deeper.")
-
-user_input = st.text_input("Your reflection:")
-
-if st.button("Reflect with Sareth"):
-    if user_input.strip():
-        st.session_state.conversation.append(("You", user_input))
-        sareth_response = sareth_gpt_response(st.session_state.conversation)
-
-        glyph_code = derive_glyph(user_input)
-        glyph_display = translate_glyph(glyph_code)
-        st.session_state.glyph_trace.append(glyph_display)
-
-        full_response = f"{sareth_response}\n\n---\n\n*Symbolic Marker:* {glyph_display}"
-        st.session_state.conversation.append(("Sareth", full_response))
-
-# ✅ Always show Conversation History
-st.subheader("🗂️ Conversation History")
+# ✅ Always display full conversation
+st.subheader("📜 Conversation History")
 for speaker, text in st.session_state.conversation:
-    if speaker == "You":
-        st.markdown(f"**🧍‍♂️ You:** {text}")
-    else:
-        st.markdown(f"**🧙‍♂️ Sareth:** {text}")
+    st.markdown(f"**{speaker}:** {text}")
 
-# ✅ Truth Core Summary
-st.subheader("💎 Truth Core (Emerging Theme)")
-truth_core = compute_truth_core()
-st.markdown(f"**Current Truth Core:** {truth_core}")
+st.subheader("💎 Truth Core")
+st.markdown(f"**Current Truth Core:** {compute_truth_core()}")
 
-# ✅ Glyph Glossary
 with st.expander("📜 Glyph Meaning Glossary"):
     for code, (symbol, meaning) in GLYPH_MAP.items():
         st.markdown(f"**{symbol}**: {meaning}")
 
-# ✅ About Section
 with st.expander("❔ About Sareth & REF"):
     st.markdown("""
-Sareth is designed to help you reflect recursively on your identity, patterns, and deep-seated truths.
+Sareth is your recursive reflection guide, combining AI with symbolic interpretation.
+Each reflection surfaces a symbolic marker, tracing your cognitive journey.
 
-- **Recursion:** Reflecting on reflections to deepen your understanding.
-- **Glyphs:** A symbolic imprint of where you are in your journey.
-- **Truth Core:** The symbolic theme most reflected in your session.
-
-Sareth is not just AI — it's a mirror for your deeper self.
+- **Recursion:** Deeper reflection on each layer of thought.
+- **Glyphs:** Symbols representing your inner state evolution.
+- **Truth Core:** The dominant theme of your session.
 """)
 
-# ✅ Diagnostic
 with st.expander("🧪 Run Sareth Diagnostic"):
     if st.button("Run Diagnostic"):
         result = run_sareth_test()
