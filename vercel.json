@@ -1,0 +1,6 @@
+{
+  "rootDirectory": "frontend",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run start",
+  "outputDirectory": "dist"
+}
