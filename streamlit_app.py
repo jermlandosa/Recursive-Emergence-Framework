@@ -1,13 +1,17 @@
+# streamlit_app.py
 import streamlit as st
-from main import run_recursive_engine  # Assuming main.py has a callable function
+from main import run_recursive_engine
 
-st.title("Recursive Emergence Framework UI")
+st.set_page_config(page_title="Sareth UI", layout="centered")
+st.title("🌀 Recursive Emergence Framework")
 
-depth = st.slider("Initial Depth", 0, 10, 0)
+depth = st.slider("Max Recursion Depth", 1, 10, 5)
 tension = st.slider("Tension Threshold", 0.0, 1.0, 0.4)
 
-if st.button("Run Recursive Engine"):
+if st.button("Run Sareth Engine"):
     state, glyph, halt_reason = run_recursive_engine(depth=depth, threshold=tension)
-    st.write(f"State: {state}")
-    st.write(f"Glyph: {glyph}")
-    st.write(f"Halt Reason: {halt_reason}")
+    st.success("Run Complete.")
+    st.markdown(f"**🧠 Final State:** `{state}`")
+    st.markdown(f"**🔣 Glyph ID:** `{glyph}`")
+    st.markdown(f"**⛔ Halt Reason:** `{halt_reason}`")
+
