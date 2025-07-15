@@ -5,8 +5,8 @@ from test_tools import run_sareth_test
 
 st.set_page_config(page_title="Sareth | Recursive GPT Reflection", layout="wide")
 
-# Load OpenAI key securely
-openai.api_key = st.secrets["openai_api_key"]
+# ✅ Read OpenAI key from [openai] section in secrets
+openai.api_key = st.secrets["openai"]["api_key"]
 
 if "conversation" not in st.session_state:
     st.session_state.conversation = []
