@@ -8,7 +8,6 @@ import random
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 
-# Initialize OpenAI client
 client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
 if "conversation" not in st.session_state:
@@ -53,8 +52,25 @@ def sareth_gpt_response(conversation_history):
         messages=messages,
         temperature=0.7
     )
-    # ✅ Correct way to extract the message content
     return response.choices[0].message.content
+
+def should_surface_glyph(conversation_history):
+    significance_check_prompt = {
+        "role": "user",
+        "content": (
+            "Based on our last exchange, does the user's reflection reveal a meaningful insight, tension, contradiction, "
+            "or pattern worth surfacing a symbolic marker for? Answer only 'yes' or 'no'."
+        )
+    }
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}] + conversation_history + [significance_check_prompt]
+
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=messages,
+        temperature=0
+    )
+    return response.choices[0].message.content.strip().lower() == "yes"
 
 def derive_glyph(user_input):
     engine = Recursor(max_depth=10, tension_threshold=0.7)
@@ -92,13 +108,17 @@ def process_reflection():
         return
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
+
     sareth_response = sareth_gpt_response(st.session_state.conversation)
 
-    glyph_code = derive_glyph(user_input)
-    glyph_display = translate_glyph(glyph_code)
-    st.session_state.glyph_trace.append(glyph_display)
+    if should_surface_glyph(st.session_state.conversation):
+        glyph_code = derive_glyph(user_input)
+        glyph_display = translate_glyph(glyph_code)
+        st.session_state.glyph_trace.append(glyph_display)
+        full_response = f"{sareth_response}\n\n---\n**Symbolic Marker:** {glyph_display}"
+    else:
+        full_response = f"{sareth_response}\n\n_Note: No symbolic marker surfaced — reflect deeper to uncover more._"
 
-    full_response = f"{sareth_response}\n\n*Symbolic Marker:* {glyph_display} _(at {timestamp})_"
     st.session_state.conversation.append(("Sareth", full_response))
     st.session_state.user_input = ""
 
@@ -153,7 +173,7 @@ with st.expander("📜 Glyph Meaning Glossary"):
 with st.expander("❔ About Sareth & REF"):
     st.markdown("""
 Sareth is your recursive reflection guide, combining AI with symbolic interpretation.
-Each reflection surfaces a symbolic marker, tracing your cognitive journey.
+Each reflection surfaces a symbolic marker, tracing your cognitive journey — but only when your insights are deep enough.
 
 - **Recursion:** Deeper reflection on each layer of thought.
 - **Glyphs:** Symbols representing your inner state evolution.
