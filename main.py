@@ -1,3 +1,5 @@
+import streamlit as st
+
 from visualizer import Visualizer
 from logger import StateLogger
 from recursor import Recursor
