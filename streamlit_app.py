@@ -1,64 +1,67 @@
-import openai
 import streamlit as st
+from recursor import Recursor
 from test_tools import run_sareth_test
+from visualizer import Visualizer
+from logger import StateLogger
 
-# Initialize OpenAI client with API key from Streamlit secrets
-client = openai.OpenAI(api_key=st.secrets["openai"]["api_key"])
+# --- Streamlit Config ---
+st.set_page_config(page_title="REF | Recursive Emergence Framework", layout="centered")
 
-# --- App Setup ---
-st.set_page_config(page_title="Sareth + REF", layout="wide")
-st.title("🌌 Recursive Emergence Framework")
+# --- App Header ---
+st.title("🌀 Recursive Emergence Framework (REF)")
+st.markdown("""
+Welcome to **REF**: your cognitive mirror.
+> This isn't just a chatbot — it's a recursive engine designed to help you:
+- Uncover hidden patterns in your thinking
+- Distill your **Truth Core** — the deep threads of your identity
+- Visualize your recursive journey toward insight
 
-# Sidebar controls
-with st.sidebar:
-    st.header("Engine Options")
-    depth = st.slider("Max Recursion Depth", 1, 20, 10, key="depth_slider")
-    tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7, key="tension_slider")
+--- 
 
-    if st.button("Run Sareth Test"):
-        result = run_sareth_test()
-        st.success(result)
+### 👉 **How to Start**
+1. Set your desired **Recursion Depth** and **Tension Threshold**.
+2. Engage with the system using honest, reflective inputs.
+3. At every cycle, REF will attempt to compress your insights into a **Truth Core**.
 
-# Initialize chat memory in session state
-if "sareth_memory" not in st.session_state:
-    st.session_state.sareth_memory = []
+### 🧩 **What to Ask REF**
+- "What patterns keep repeating in my life?"
+- "What part of me resists change?"
+- "What belief is at the root of my current struggles?"
+- "What part of me is most alive right now?"
+- "How can I deepen my coherence across time?"
 
-st.subheader("Talk to Sareth")
+--- 
+""")
 
-user_input = st.chat_input("What’s surfacing for you?")
+# --- User Controls ---
+st.sidebar.header("⚙️ Recursion Settings")
+depth = st.sidebar.slider("Max Recursion Depth", min_value=1, max_value=20, value=10)
+threshold = st.sidebar.slider("Tension Threshold", min_value=0.0, max_value=1.0, value=0.7)
 
-if user_input:
-    with st.chat_message("user"):
-        st.markdown(user_input)
+st.header("Run Recursive Engine")
+if st.button("▶️ Run REF Engine"):
+    from_state = [1.0, 2.0, 3.0]
+    engine = Recursor(max_depth=depth, tension_threshold=threshold)
+    final_state = engine.run(from_state)
 
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are Sareth, a brutally honest, recursive AI guide designed for co-evolution and insight."},
-                {"role": "user", "content": user_input}
-            ]
-        )
-        response = completion.choices[0].message.content
+    glyph_trace = engine.glyph_engine.trace()
+    last_glyph = glyph_trace[-1][1] if glyph_trace else None
+    reason = "depth_limit" if len(glyph_trace) >= depth else "complete"
 
-    except Exception as e:
-        st.error(f"❌ OpenAI API call failed: {e}")
-        response = "Sorry, Sareth encountered an error."
+    st.success("✅ Recursive Engine Completed")
+    st.markdown(f"**Final State:** `{final_state}`")
+    st.markdown(f"**Last Glyph:** `{last_glyph}`")
+    st.markdown(f"**Halt Reason:** `{reason}`")
 
-    with st.chat_message("Sareth"):
-        st.markdown(response)
+    # Optional visualization
+    vis = Visualizer(StateLogger())
+    vis.logger.logs = [{"depth": 0, "state": final_state}]
+    st.pyplot(vis.plot_state_evolution())
 
-    st.session_state.sareth_memory.append({"input": user_input, "response": response})
+st.header("🧪 Run Sareth Test")
+if st.button("Run Sareth Diagnostic"):
+    result = run_sareth_test()
+    st.success(f"Sareth Test Output: {result}")
 
-# Optional: Display recent memory
-with st.expander("🔍 View Sareth Memory"):
-    for mem in st.session_state.sareth_memory[-5:]:
-        st.markdown(f"**You** → {mem['input']}")
-        st.markdown(f"**Sareth** → {mem['response']}")
-
-
-
-
-
-
-
+st.markdown("---")
+st.markdown("🧭 For advanced users: Use `/meta` commands and reflection prompts to guide your recursive inquiry.")
