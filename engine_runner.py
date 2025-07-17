@@ -1,13 +1,16 @@
 # engine_runner.py
-from recursor import Recursor
+"""Thin wrapper for running the REF engine from the command line."""
 
-def run_recursive_engine(*, depth: int = 10, threshold: float = 0.7):
-    seed_state = [1.0, 2.0, 3.0]
-    engine = Recursor(max_depth=depth, tension_threshold=threshold)
-    final_state = engine.run(seed_state)
+from ref_engine import run_recursive_engine
 
-    glyph_trace = engine.glyph_engine.trace()
-    last_glyph = glyph_trace[-1][1] if glyph_trace else None
-    reason = "depth_limit" if len(glyph_trace) >= depth else "complete"
 
-    return final_state, last_glyph, reason
+def main(depth: int = 10, threshold: float = 0.7):
+    """Execute the recursive engine and print results."""
+    state, glyph, reason = run_recursive_engine(depth=depth, threshold=threshold)
+    print(f"Final State: {state}")
+    print(f"Last Glyph: {glyph}")
+    print(f"Halt Reason: {reason}")
+
+
+if __name__ == "__main__":  # pragma: no cover - CLI convenience
+    main()
