@@ -1,23 +1,10 @@
-from recursor import Recursor
+"""Command line entrypoint and optional Streamlit UI for the REF engine."""
+
+from logger import StateLogger
 from test_tools import run_sareth_test
 from visualizer import Visualizer
-from logger import StateLogger
+from ref_engine import run_recursive_engine
 
-def run_recursive_engine(*, depth: int = 10, threshold: float = 0.7):
-    """Runs the recursive engine with user-defined parameters."""
-    seed_state = [1.0, 2.0, 3.0]
-    engine = Recursor(max_depth=depth, tension_threshold=threshold)
-    final_state = engine.run(seed_state)
-
-    glyph_trace = engine.glyph_engine.trace()
-    last_glyph = glyph_trace[-1][1] if glyph_trace else None
-
-    if len(glyph_trace) >= depth:
-        reason = "depth_limit"
-    else:
-        reason = "complete"
-
-    return final_state, last_glyph, reason
 
 # Optional Streamlit UI
 try:
