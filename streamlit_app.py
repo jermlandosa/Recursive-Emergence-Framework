@@ -17,6 +17,8 @@ if "glyph_trace" not in st.session_state:
     st.session_state.glyph_trace = []
 if "user_input" not in st.session_state:
     st.session_state.user_input = ""
+if "search_query" not in st.session_state:
+    st.session_state.search_query = ""
 
 GLYPH_MAP = {
     "G1": ("🔵", "Coherence emerging"),
@@ -124,6 +126,14 @@ def compute_truth_core():
         return "None yet"
     return max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
 
+def reset_conversation():
+    st.session_state.conversation = []
+    st.session_state.glyph_trace = []
+    st.session_state.user_input = ""
+    st.session_state.search_query = ""
+    st.success("Conversation reset!")
+    st.experimental_rerun()
+
 def process_reflection():
     user_input = st.session_state.user_input.strip()
     if not user_input:
@@ -148,6 +158,21 @@ def process_reflection():
 
 st.title("🌀 Sareth | Recursive Reflection")
 
+st.subheader("📜 Conversation History")
+
+display_history = st.session_state.conversation
+if st.session_state.search_query:
+    q = st.session_state.search_query.lower()
+    display_history = [m for m in st.session_state.conversation if q in m[1].lower()]
+
+history_html = "<div style='height: 400px; overflow-y:auto;'>"
+for speaker, text in reversed(display_history):
+    history_html += f"<p><strong>{speaker}:</strong> {text}</p>"
+history_html += "</div>"
+st.markdown(history_html, unsafe_allow_html=True)
+
+st.text_input("Search conversation:", key="search_query")
+
 st.markdown("Share a reflection, question, or thought. Press **Enter** or click **Reflect with Sareth** to continue your journey.")
 
 st.text_input(
@@ -163,16 +188,8 @@ with col2:
     if st.button("🎲 Generate Reflection Prompt"):
         st.info(random.choice(reflection_prompts))
 with col3:
-    if st.button("🔄 Reset Conversation"):
-        st.session_state.conversation = []
-        st.session_state.glyph_trace = []
-        st.session_state.user_input = ""
-        st.success("Conversation reset!")
+    st.button("🔄 Reset Conversation", on_click=reset_conversation)
 
-st.subheader("📜 Conversation History")
-for speaker, text in st.session_state.conversation:
-    st.markdown(f"**{speaker}:** {text}")
-st.markdown("---")
 
 st.subheader("🧿 Last Symbolic Marker")
 if st.session_state.glyph_trace:
