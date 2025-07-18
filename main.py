@@ -32,7 +32,7 @@ try:
     tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7)
 
     if st.button("▶️ Run Recursive Engine"):
-        state, glyph, reason = run_recursive_engine(depth=depth, threshold=tension)
+        state, glyph, reason, _ = run_recursive_engine_local(depth=depth, threshold=tension)
         st.write(f"**Final State:** {state}")
         st.write(f"**Last Glyph:** {glyph}")
         st.write(f"**Halt Reason:** `{reason}`")
@@ -49,7 +49,6 @@ except Exception as e:
 if __name__ == "__main__":
     state, glyph, reason, engine = run_recursive_engine_local(depth=15, threshold=0.2)
 
-    # Visualize recursion
     vis = Visualizer(StateLogger())
     vis.logger.logs = [{'depth': i, 'state': s} for i, s in enumerate([state])]
     vis.plot_state_evolution()
@@ -60,7 +59,3 @@ if __name__ == "__main__":
 
     result = run_sareth_test()
     print("Sareth Test Output:", result)
-
-
-
-
