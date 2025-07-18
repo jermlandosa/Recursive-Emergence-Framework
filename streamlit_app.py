@@ -28,10 +28,8 @@ if "conversation" not in st.session_state:
     st.session_state.conversation = []
 if "glyph_trace" not in st.session_state:
     st.session_state.glyph_trace = []
-if "user_input" not in st.session_state:
-    st.session_state.user_input = ""
-if "search_query" not in st.session_state:
-    st.session_state.search_query = ""
+if "conversation_history" not in st.session_state:
+    st.session_state.conversation_history = []
 
 GLYPH_MAP = {
     "G1": ("🔵", "Coherence emerging"),
@@ -140,20 +138,20 @@ def compute_truth_core():
     return max(set(st.session_state.glyph_trace), key=st.session_state.glyph_trace.count)
 
 def reset_conversation():
+    if st.session_state.conversation:
+        st.session_state.conversation_history.append(
+            (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), st.session_state.conversation.copy())
+        )
     st.session_state.conversation = []
     st.session_state.glyph_trace = []
-    st.session_state.user_input = ""
-    st.session_state.search_query = ""
     st.success("Conversation reset!")
     st.experimental_rerun()
 
-def process_reflection():
-    user_input = st.session_state.user_input.strip()
+def process_reflection(message: str):
+    user_input = message.strip()
     if not user_input:
         return
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
-
+    st.session_state.conversation.append(("You", user_input))
     sareth_response = sareth_gpt_response(st.session_state.conversation)
 
     if should_surface_glyph(st.session_state.conversation):
@@ -165,58 +163,49 @@ def process_reflection():
         full_response = f"{sareth_response}\n\n_Note: No symbolic marker surfaced — reflect deeper to uncover more._"
 
     st.session_state.conversation.append(("Sareth", full_response))
-    st.session_state.user_input = ""
 
 # --- UI ---
 
 st.title("🌀 Sareth | Recursive Reflection")
 
-st.subheader("📜 Conversation History")
+chat_col, history_col = st.columns([3, 1])
 
-display_history = st.session_state.conversation
-if st.session_state.search_query:
-    q = st.session_state.search_query.lower()
-    display_history = [m for m in st.session_state.conversation if q in m[1].lower()]
+with chat_col:
+    for speaker, text in st.session_state.conversation:
+        with st.chat_message("user" if speaker == "You" else "assistant"):
+            st.markdown(text)
 
-history_html = "<div style='height: 400px; overflow-y:auto;'>"
-for speaker, text in reversed(display_history):
-    history_html += f"<p><strong>{speaker}:</strong> {text}</p>"
-history_html += "</div>"
-st.markdown(history_html, unsafe_allow_html=True)
+    prompt = st.chat_input("Share a reflection...")
+    if prompt:
+        process_reflection(prompt)
 
-st.text_input("Search conversation:", key="search_query")
+    cols = st.columns(2)
+    with cols[0]:
+        if st.button("🎲 Generate Reflection Prompt"):
+            st.info(random.choice(reflection_prompts))
+    with cols[1]:
+        st.button("🔄 Reset Conversation", on_click=reset_conversation)
 
-st.markdown("Share a reflection, question, or thought. Press **Enter** or click **Reflect with Sareth** to continue your journey.")
+    st.subheader("🧿 Last Symbolic Marker")
+    if st.session_state.glyph_trace:
+        st.markdown(f"**{st.session_state.glyph_trace[-1]}**")
+    else:
+        st.markdown("_None yet_")
 
-st.text_input(
-    "Your reflection:",
-    key="user_input",
-    on_change=process_reflection
-)
+    st.subheader("💎 Truth Core")
+    st.markdown(f"**Current Truth Core:** {compute_truth_core()}")
 
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.button("Reflect with Sareth", on_click=process_reflection)
-with col2:
-    if st.button("🎲 Generate Reflection Prompt"):
-        st.info(random.choice(reflection_prompts))
-with col3:
-    st.button("🔄 Reset Conversation", on_click=reset_conversation)
+    st.subheader("📊 Glyph Frequency Summary")
+    glyph_counts = Counter(st.session_state.glyph_trace)
+    for glyph, count in glyph_counts.items():
+        st.markdown(f"**{glyph}**: {count} times")
 
-
-st.subheader("🧿 Last Symbolic Marker")
-if st.session_state.glyph_trace:
-    st.markdown(f"**{st.session_state.glyph_trace[-1]}**")
-else:
-    st.markdown("_None yet_")
-
-st.subheader("💎 Truth Core")
-st.markdown(f"**Current Truth Core:** {compute_truth_core()}")
-
-st.subheader("📊 Glyph Frequency Summary")
-glyph_counts = Counter(st.session_state.glyph_trace)
-for glyph, count in glyph_counts.items():
-    st.markdown(f"**{glyph}**: {count} times")
+with history_col:
+    st.subheader("📂 Past Sessions")
+    for ts, conv in reversed(st.session_state.conversation_history):
+        with st.expander(ts):
+            for speaker, text in conv:
+                st.markdown(f"**{speaker}:** {text}")
 
 with st.expander("📜 Glyph Meaning Glossary"):
     for code, (symbol, meaning) in GLYPH_MAP.items():
