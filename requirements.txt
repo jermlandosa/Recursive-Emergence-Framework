@@ -3,4 +3,6 @@ numpy
 transformers
 requests
 pytest
+matplotlib
+nltk
 streamlit
