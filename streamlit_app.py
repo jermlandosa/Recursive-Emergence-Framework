@@ -10,6 +10,28 @@ import re
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 
+st.markdown('''
+    <style>
+    @media only screen and (max-width: 600px) {
+        .stButton>button {
+            padding: 0.75em 1.5em;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+        }
+        textarea {
+            width: 100% !important;
+        }
+        .stTextInput input {
+            font-size: 1.1em;
+        }
+    }
+    .block-container {
+        max-width: 700px;
+        margin: auto;
+    }
+    </style>
+''', unsafe_allow_html=True)
+
 client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
 # Initialize session state
@@ -134,33 +156,49 @@ with st.expander("⚙️ Run REF Engine"):
         st.markdown(f"**🔣 Glyph ID:** `{glyph}`")
         st.markdown(f"**⛔ Halt Reason:** `{halt_reason}`")
 
-st.text_input("Your reflection:", key="user_input", on_change=process_reflection)
-st.button("Reflect with Sareth", on_click=process_reflection)
-st.button("🔄 Reset Conversation", on_click=reset_conversation)
+st.markdown("---")
 
-st.subheader("📜 Conversation History")
-display_history = [m for m in st.session_state.conversation if st.session_state.search_query.lower() in m[1].lower()] if st.session_state.search_query else st.session_state.conversation
-for speaker, text in reversed(display_history):
-    st.markdown(f"**{speaker}:** {text}")
+tab1, tab2, tab3 = st.tabs(["Reflect", "Conversation History", "Insights"])
 
-st.text_input("Search conversation:", key="search_query")
+with tab1:
+    st.text_area("Your reflection:", key="user_input", height=150)
+    st.button("Reflect with Sareth", on_click=process_reflection)
+    if st.button("Generate Reflection Prompt"):
+        st.session_state.user_input = random.choice(reflection_prompts)
+        st.experimental_rerun()
+    st.button("🔄 Reset Conversation", on_click=reset_conversation)
 
-st.subheader("🧿 Last Symbolic Marker")
-st.markdown(f"**{st.session_state.glyph_trace[-1]}**" if st.session_state.glyph_trace else "_None yet_")
+with tab2:
+    st.write("")
+    st.markdown("---")
+    display_history = [m for m in st.session_state.conversation if st.session_state.search_query.lower() in m[1].lower()] if st.session_state.search_query else st.session_state.conversation
+    for speaker, text in reversed(display_history):
+        with st.expander(f"{speaker}"):
+            st.markdown(text)
+    st.text_input("Search conversation:", key="search_query")
 
-st.subheader("💎 Truth Core")
-st.markdown(f"**Current Truth Core:** {compute_truth_core()}")
+with tab3:
+    st.write("")
+    st.markdown("---")
+    st.subheader("🧿 Last Symbolic Marker")
+    st.markdown(f"**{st.session_state.glyph_trace[-1]}**" if st.session_state.glyph_trace else "_None yet_")
 
-st.subheader("📊 Glyph Frequency Summary")
-for glyph, count in Counter(st.session_state.glyph_trace).items():
-    st.markdown(f"**{glyph}**: {count} times")
+    st.markdown("---")
+    st.subheader("💎 Truth Core")
+    st.markdown(f"**Current Truth Core:** {compute_truth_core()}")
 
-with st.expander("📜 Glyph Meaning Glossary"):
-    for code, (symbol, meaning) in GLYPH_MAP.items():
-        st.markdown(f"**{symbol}**: {meaning}")
+    st.markdown("---")
+    st.subheader("📊 Glyph Frequency Summary")
+    for glyph, count in Counter(st.session_state.glyph_trace).items():
+        st.markdown(f"**{glyph}**: {count} times")
 
-with st.expander("❔ About Sareth & REF"):
-    st.markdown("""
+    st.markdown("---")
+    with st.expander("📜 Glyph Meaning Glossary"):
+        for code, (symbol, meaning) in GLYPH_MAP.items():
+            st.markdown(f"**{symbol}**: {meaning}")
+
+    with st.expander("❔ About Sareth & REF"):
+        st.markdown("""
 Sareth is your recursive reflection guide, combining AI with symbolic interpretation.
 Each reflection surfaces a symbolic marker, tracing your cognitive journey — but only when your insights are deep enough.
 
@@ -169,8 +207,8 @@ Each reflection surfaces a symbolic marker, tracing your cognitive journey — b
 - **Truth Core:** The dominant theme of your session.
 """)
 
-with st.expander("🧪 Run Sareth Diagnostic"):
-    if st.button("Run Diagnostic"):
-        result = run_sareth_test()
-        st.success(f"Sareth Diagnostic Result: {result}")
+    with st.expander("🧪 Run Sareth Diagnostic"):
+        if st.button("Run Diagnostic"):
+            result = run_sareth_test()
+            st.success(f"Sareth Diagnostic Result: {result}")
 
