@@ -118,6 +118,12 @@ def process_reflection():
 # --- UI ---
 st.title("🌀 Sareth | Recursive Reflection")
 
+st.markdown(
+    "The **Recursive Emergence Framework (REF)** analyzes your reflections in a recursive loop. "
+    "**Sareth** guides you through this process, surfacing symbolic markers—called glyphs—to highlight key insights. "
+    "Start by entering a thought below to explore what emerges."
+)
+
 with st.expander("⚙️ Run REF Engine"):
     depth = st.slider("Max Recursion Depth", 1, 10, 5, key="depth")
     tension = st.slider("Tension Threshold", 0.0, 1.0, 0.4, key="tension")
