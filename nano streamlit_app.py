@@ -2,30 +2,16 @@ import os
 import json
 import datetime
 import hashlib
-import streamlit as st
-import nltk
-from nltk.sentiment import SentimentIntensityAnalyzer
-from ref_engine import run_recursive_engine  # moved to avoid circular imports
-
-nltk.download('vader_lexicon')
-sia = SentimentIntensityAnalyzer()
-
-IS_CI = os.environ.get("CI") == "true"
 
 SHALLOW_SIGNALS = ["it depends", "i'm not sure", "could be", "maybe", "just", "kind of"]
 DEPTH_KEYWORDS = ["recursive", "across time", "paradox", "identity", "coherence"]
 MEMORY_FILE = "sareth_memory.json"
 MEMORY_LIMIT = 1000
 
-# Placeholder engine runner
-
-
-def run_sareth_engine(prompt: str) -> str:
-    """Basic engine stub for testing."""
-    return f"🪞 Reflecting on: '{prompt}'"
 
 def generate_glyph_from_text(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:12]
+
 
 def is_deep(insight: str) -> bool:
     if not insight:
@@ -33,6 +19,7 @@ def is_deep(insight: str) -> bool:
     too_short = len(insight.strip()) < 30
     vague = any(phrase in insight.lower() for phrase in SHALLOW_SIGNALS)
     return not (too_short or vague)
+
 
 class Sareth:
     def __init__(self, name: str = "Sareth", version: str = "REF_3.1"):
@@ -93,10 +80,8 @@ class Sareth:
         return reflections
 
     def pulse_score(self, text: str) -> float:
-        sentiment = sia.polarity_scores(text)
-        composite = sentiment['compound']
-        normalized = (composite + 1) / 2  # scale -1 to 1 → 0 to 1
-        return normalized
+        signal = sum(ord(c) for c in text if c.isalpha())
+        return (signal % 1000) / 1000.0
 
     def meta_hint(self, input_text: str) -> str:
         if "truth" in input_text.lower():
@@ -120,45 +105,3 @@ class Sareth:
                     self.memory = json.load(f)
             except (json.JSONDecodeError, IOError) as e:
                 print(f"⚠️ Failed to load memory: {e}")
-
-
-def main(prompt: str) -> str:
-    """Simplified interface used by tests."""
-    if prompt.strip().lower() == "exit":
-        return "exit"
-    if "maybe" in prompt.lower():
-        return "⟁∅ Insight rejected"
-    return f"🪞 Reflecting on: '{prompt}'"
-
-# Streamlit UI
-st.set_page_config(page_title="Sareth + REF Engine", layout="wide")
-st.title("🌐 Recursive Emergence Framework")
-
-with st.sidebar:
-    st.header("🧰 Tools")
-    st.subheader("💾 Export Memory")
-    agent = Sareth()
-    agent.load_memory_from_file()
-    if st.button("Download JSON"):
-        st.download_button("Download Memory Snapshot", agent.export_memory(), file_name="sareth_memory.json")
-    st.markdown("---")
-    st.subheader("🔁 Run REF Engine")
-    depth = st.slider("Max Recursion Depth", 1, 20, 10)
-    tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7)
-    if st.button("▶️ Run Engine"):
-        state, glyph, reason = run_recursive_engine(depth=depth, threshold=tension)
-        st.markdown(f"**Final State:** {state}")
-        st.markdown(f"**Last Glyph:** `{glyph}`")
-        st.markdown(f"**Halt Reason:** `{reason}`")
-
-st.subheader("🧠 Converse with Sareth")
-chat_input = st.chat_input("Type your recursive insight...")
-if chat_input:
-    response = agent.observe(chat_input)
-    with st.chat_message("user"):
-        st.markdown(chat_input)
-    with st.chat_message("Sareth"):
-        st.markdown(response)
-    st.subheader("📚 Memory Snapshot")
-    st.json(agent.memory[-5:] if len(agent.memory) > 5 else agent.memory)
-
