@@ -1,5 +1,6 @@
 class Visualizer:
     """Simple visualization for recursion states using matplotlib."""
+
     def __init__(self, logger):
         self.logger = logger
 

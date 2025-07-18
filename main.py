@@ -1,9 +1,23 @@
 """Command line entrypoint and optional Streamlit UI for the REF engine."""
 
 from logger import StateLogger
-from test_tools import run_sareth_test
 from visualizer import Visualizer
+from test_tools import run_sareth_test
 from ref_engine import run_recursive_engine
+from recursor import Recursor
+
+
+def run_recursive_engine_local(*, depth: int = 10, threshold: float = 0.7):
+    """Run the Recursor with a simple numeric seed state and return the engine."""
+    engine = Recursor(max_depth=depth, tension_threshold=threshold)
+
+    seed_state = [1.0, 1.5, 2.0]
+    final_state = engine.run(seed_state)
+
+    trace = engine.glyph_engine.trace()
+    glyph = trace[-1][1] if trace else ""
+
+    return final_state, glyph, "complete", engine
 
 
 # Optional Streamlit UI
@@ -18,7 +32,7 @@ try:
     tension = st.slider("Tension Threshold", 0.0, 1.0, 0.7)
 
     if st.button("▶️ Run Recursive Engine"):
-        state, glyph, reason = run_recursive_engine(depth=depth, threshold=tension)
+        state, glyph, reason, _ = run_recursive_engine_local(depth=depth, threshold=tension)
         st.write(f"**Final State:** {state}")
         st.write(f"**Last Glyph:** {glyph}")
         st.write(f"**Halt Reason:** `{reason}`")
@@ -33,9 +47,8 @@ except Exception as e:
 
 # CLI Entry Point
 if __name__ == "__main__":
-    state, glyph, reason = run_recursive_engine(depth=15, threshold=0.2)
+    state, glyph, reason, engine = run_recursive_engine_local(depth=15, threshold=0.2)
 
-    # Optional: visualize
     vis = Visualizer(StateLogger())
     vis.logger.logs = [{'depth': i, 'state': s} for i, s in enumerate([state])]
     vis.plot_state_evolution()
@@ -46,7 +59,3 @@ if __name__ == "__main__":
 
     result = run_sareth_test()
     print("Sareth Test Output:", result)
-
-
-
-

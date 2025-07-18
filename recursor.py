@@ -4,17 +4,19 @@ from evaluator import Evaluator
 from logger import StateLogger
 from glyph_engine import GlyphEngine
 
+
 class Recursor:
     """
     Core engine: iteratively transforms `state`, logging depth-wise data,
     generating glyphs, and halting on convergence or excess tension.
     """
+
     def __init__(self, *, max_depth: int = 10, tension_threshold: float = 0.7):
-        self.memory            = RecursiveMemory()
-        self.evaluator         = Evaluator()
-        self.logger            = StateLogger()
-        self.glyph_engine      = GlyphEngine()
-        self.max_depth         = max_depth
+        self.memory = RecursiveMemory()
+        self.evaluator = Evaluator()
+        self.logger = StateLogger()
+        self.glyph_engine = GlyphEngine()
+        self.max_depth = max_depth
         self.tension_threshold = tension_threshold
 
     def run(self, seed_state):
@@ -32,7 +34,9 @@ class Recursor:
             # 3️⃣  Tension check
             tension = self.evaluator.calculate_tension(state)
             if tension > self.tension_threshold:
-                print(f"[HALT] tension {tension:.3f} exceeded threshold at depth {depth}")
+                print(
+                    f"[HALT] tension {tension:.3f} exceeded threshold at depth {depth}"
+                )
                 self.memory.store_state(state)
                 break
 
@@ -51,4 +55,3 @@ class Recursor:
             self.memory.store_state(state)
 
         return state
-

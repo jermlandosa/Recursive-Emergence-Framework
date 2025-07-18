@@ -114,16 +114,14 @@ class Sareth:
             except (json.JSONDecodeError, IOError) as e:
                 print(f"⚠️ Failed to load memory: {e}")
 
-
 def main(prompt: str) -> str:
-    """Simplified interface used by tests."""
     if prompt.strip().lower() == "exit":
         return "exit"
     if "maybe" in prompt.lower():
         return "⟁∅ Insight rejected"
     return f"🪞 Reflecting on: '{prompt}'"
 
-# Streamlit UI
+# ---- Streamlit UI ----
 st.set_page_config(page_title="Sareth + REF Engine", layout="wide")
 st.title("🌐 Recursive Emergence Framework")
 
@@ -154,4 +152,5 @@ if chat_input:
         st.markdown(response)
     st.subheader("📚 Memory Snapshot")
     st.json(agent.memory[-5:] if len(agent.memory) > 5 else agent.memory)
+
 
