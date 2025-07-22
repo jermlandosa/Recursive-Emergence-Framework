@@ -9,6 +9,25 @@ import random
 import re
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
+st.write("App Loaded")
+
+# Mobile responsive styling
+MOBILE_CSS = """
+<style>
+@media (max-width: 768px) {
+    .block-container {padding:1rem !important;}
+    .stButton>button {width:100%;margin-top:.5rem;}
+    textarea,input {font-size:1.1rem !important;}
+}
+.block-container {max-width:700px;margin:auto;}
+</style>
+"""
+
+st.markdown(
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    unsafe_allow_html=True,
+)
+st.markdown(MOBILE_CSS, unsafe_allow_html=True)
 
 client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
@@ -16,6 +35,12 @@ client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 for key in ["conversation", "glyph_trace", "conversation_history", "user_input", "search_query"]:
     if key not in st.session_state:
         st.session_state[key] = [] if 'trace' in key or 'conversation' in key else ""
+
+# Track UI state
+if 'show_help' not in st.session_state:
+    st.session_state.show_help = False
+if 'onboarded' not in st.session_state:
+    st.session_state.onboarded = False
 
 GLYPH_MAP = {
     "G1": ("🔵", "Coherence emerging"),
@@ -102,7 +127,11 @@ def process_reflection():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
 
-    sareth_response = sareth_gpt_response(st.session_state.conversation)
+    try:
+        sareth_response = sareth_gpt_response(st.session_state.conversation)
+    except Exception as e:
+        st.error(f"Reflection error: {e}")
+        return
 
     if should_surface_glyph(st.session_state.conversation):
         glyph_code = derive_glyph(user_input)
@@ -118,43 +147,89 @@ def process_reflection():
 # --- UI ---
 st.title("🌀 Sareth | Recursive Reflection")
 
+intro_md = """
+**Welcome to the Recursive Emergence Framework (REF).**
+
+REF is a symbolic cognitive architecture that guides you through recursive self-reflection. Enter a thought below and press **Reflect with Sareth** to surface symbolic markers known as *glyphs*. Use the REF Engine section for deeper experimentation with recursion settings.
+"""
+st.markdown(intro_md)
+
+if not st.session_state.onboarded:
+    with st.sidebar.expander("👋 Quick Start", expanded=True):
+        st.markdown("1. Write a thought in the text box.\n2. Click **Reflect with Sareth**.\n3. Review the glyphs and insights that appear.")
+        if st.button("Start Exploring", key="start_onboarding"):
+            st.session_state.onboarded = True
+            st.experimental_rerun()
+
 with st.expander("⚙️ Run REF Engine"):
-    depth = st.slider("Max Recursion Depth", 1, 10, 5, key="depth")
-    tension = st.slider("Tension Threshold", 0.0, 1.0, 0.4, key="tension")
-    if st.button("Run REF Engine"):
-        state, glyph, halt_reason = run_recursive_engine(depth=depth, threshold=tension)
-        st.success("Run Complete.")
-        st.markdown(f"**🧠 Final State:** `{state}`")
-        st.markdown(f"**🔣 Glyph ID:** `{glyph}`")
-        st.markdown(f"**⛔ Halt Reason:** `{halt_reason}`")
+    depth = st.slider("Max Recursion Depth", 1, 10, 5, key="depth", help="Number of recursion cycles to run")
+    tension = st.slider("Tension Threshold", 0.0, 1.0, 0.4, key="tension", help="How easily contradictions surface glyphs")
+    if st.button("Run REF Engine", help="Execute the engine with these settings"):
+        try:
+            state, glyph, halt_reason = run_recursive_engine(depth=depth, threshold=tension)
+        except Exception as e:
+            st.error(f"Engine error: {e}")
+        else:
+            st.success("Run Complete.")
+            st.markdown(f"**🧠 Final State:** `{state}`", help="State returned by the recursion engine")
+            st.markdown(f"**🔣 Glyph ID:** `{glyph}`", help="Symbolic marker produced")
+            st.markdown(f"**⛔ Halt Reason:** `{halt_reason}`", help="Why the engine stopped")
 
-st.text_input("Your reflection:", key="user_input", on_change=process_reflection)
-st.button("Reflect with Sareth", on_click=process_reflection)
-st.button("🔄 Reset Conversation", on_click=reset_conversation)
+st.markdown("---")
 
-st.subheader("📜 Conversation History")
-display_history = [m for m in st.session_state.conversation if st.session_state.search_query.lower() in m[1].lower()] if st.session_state.search_query else st.session_state.conversation
-for speaker, text in reversed(display_history):
-    st.markdown(f"**{speaker}:** {text}")
+tab1, tab2, tab3 = st.tabs(["Reflect", "Conversation History", "Insights"])
 
-st.text_input("Search conversation:", key="search_query")
+with tab1:
+    with st.form("reflect_form"):
+        st.text_area(
+            "Your reflection:",
+            key="user_input",
+            height=150,
+            help="Write a thought or question here",
+        )
+        col1, col2, col3 = st.columns(3)
+        submit_reflect = col1.form_submit_button("Reflect with Sareth")
+        submit_prompt = col2.form_submit_button("Prompt")
+        submit_reset = col3.form_submit_button("🔄 Reset")
+    if submit_reflect:
+        process_reflection()
+    if submit_prompt:
+        st.session_state.user_input = random.choice(reflection_prompts)
+        st.experimental_rerun()
+    if submit_reset:
+        reset_conversation()
 
-st.subheader("🧿 Last Symbolic Marker")
-st.markdown(f"**{st.session_state.glyph_trace[-1]}**" if st.session_state.glyph_trace else "_None yet_")
+with tab2:
+    st.caption("Past reflections and responses")
+    st.markdown("---")
+    display_history = [m for m in st.session_state.conversation if st.session_state.search_query.lower() in m[1].lower()] if st.session_state.search_query else st.session_state.conversation
+    for speaker, text in reversed(display_history):
+        with st.expander(f"{speaker}"):
+            st.markdown(text)
+    st.text_input("Search conversation:", key="search_query", help="Filter conversation history")
 
-st.subheader("💎 Truth Core")
-st.markdown(f"**Current Truth Core:** {compute_truth_core()}")
+with tab3:
+    st.caption("Summary of symbolic insights")
+    st.markdown("---")
+    st.subheader("🧿 Last Symbolic Marker")
+    st.markdown(f"**{st.session_state.glyph_trace[-1]}**" if st.session_state.glyph_trace else "_None yet_")
 
-st.subheader("📊 Glyph Frequency Summary")
-for glyph, count in Counter(st.session_state.glyph_trace).items():
-    st.markdown(f"**{glyph}**: {count} times")
+    st.markdown("---")
+    st.subheader("💎 Truth Core")
+    st.markdown(f"**Current Truth Core:** {compute_truth_core()}")
 
-with st.expander("📜 Glyph Meaning Glossary"):
-    for code, (symbol, meaning) in GLYPH_MAP.items():
-        st.markdown(f"**{symbol}**: {meaning}")
+    st.markdown("---")
+    st.subheader("📊 Glyph Frequency Summary")
+    for glyph, count in Counter(st.session_state.glyph_trace).items():
+        st.markdown(f"**{glyph}**: {count} times")
 
-with st.expander("❔ About Sareth & REF"):
-    st.markdown("""
+    st.markdown("---")
+    with st.expander("📜 Glyph Meaning Glossary"):
+        for code, (symbol, meaning) in GLYPH_MAP.items():
+            st.markdown(f"**{symbol}**: {meaning}")
+
+    with st.expander("❔ About Sareth & REF"):
+        st.markdown("""
 Sareth is your recursive reflection guide, combining AI with symbolic interpretation.
 Each reflection surfaces a symbolic marker, tracing your cognitive journey — but only when your insights are deep enough.
 
@@ -163,8 +238,18 @@ Each reflection surfaces a symbolic marker, tracing your cognitive journey — b
 - **Truth Core:** The dominant theme of your session.
 """)
 
-with st.expander("🧪 Run Sareth Diagnostic"):
-    if st.button("Run Diagnostic"):
-        result = run_sareth_test()
-        st.success(f"Sareth Diagnostic Result: {result}")
+    with st.expander("🧪 Run Sareth Diagnostic"):
+        if st.button("Run Diagnostic", help="Health check for Sareth"):
+            result = run_sareth_test()
+            st.success(f"Sareth Diagnostic Result: {result}")
+
+# Persistent sidebar help
+if st.sidebar.button("❔ How to Use"):
+    st.session_state.show_help = not st.session_state.show_help
+if st.session_state.show_help:
+    st.sidebar.markdown("""**Using Sareth**
+1. Enter a reflection in the *Reflect* tab.
+2. Click **Reflect with Sareth**.
+3. View glyphs and summaries in the *Insights* tab.
+Use the REF Engine for advanced options.""")
 
