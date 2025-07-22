@@ -79,7 +79,12 @@ reflection_prompts = [
 ]
 
 def sanitize_text(text):
-    return re.sub(r"[_*`]", "", text).replace("---", "").strip()
+    """Strip markdown artifacts and timestamps from chat history text."""
+    text = re.sub(r"_\(at .*\)_", "", text)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"_([^_]+)_", r"\1", text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    return text.replace("---", "").strip()
 
 def sareth_gpt_response(conversation_history):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -90,14 +95,28 @@ def sareth_gpt_response(conversation_history):
     return response.choices[0].message.content
 
 def should_surface_glyph(conversation_history):
-    significance_check_prompt = {"role": "user", "content": "Does the user's reflection reveal a meaningful insight, tension, contradiction, or pattern worth surfacing a symbolic marker for? Answer only 'yes' or 'no'."}
-    recent = conversation_history[-6:]
+    """Check if the latest exchange warrants surfacing a glyph."""
+    significance_check_prompt = {
+        "role": "user",
+        "content": (
+            "Does the user's reflection reveal a meaningful insight, tension, contradiction, or pattern worth surfacing a symbolic marker for? "
+            "Answer only 'yes' or 'no'."
+        ),
+    }
+
+    recent_history = conversation_history[-6:]
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for speaker, text in recent:
-        messages.append({"role": "user" if speaker == "You" else "assistant", "content": sanitize_text(text)})
+    for speaker, text in recent_history:
+        role = "user" if speaker == "You" else "assistant"
+        messages.append({"role": role, "content": sanitize_text(text)})
+
     messages.append(significance_check_prompt)
-    response = client.chat.completions.create(model="gpt-4", messages=messages, temperature=0)
-    return response.choices[0].message.content.strip().lower() == "yes"
+    try:
+        response = client.chat.completions.create(model="gpt-4", messages=messages, temperature=0)
+        return response.choices[0].message.content.strip().lower() == "yes"
+    except Exception as exc:
+        st.error(f"API Error during glyph significance check:\n\n{exc}")
+        return False
 
 def derive_glyph(user_input):
     engine = Recursor(max_depth=10, tension_threshold=0.7)
