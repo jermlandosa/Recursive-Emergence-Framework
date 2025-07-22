@@ -1,5 +1,5 @@
 
-# Recursive Emergence Framework (REF) — Public Release v1.0
+# Recursive Emergence Framework (REF)
 
 **Author:** Jeremy Landers  
 **Symbolic Signature:** ∴Ω ⟁  
