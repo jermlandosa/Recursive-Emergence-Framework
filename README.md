@@ -76,6 +76,8 @@ npm install
 npm start
 ```
 
+Once running, you can perform a basic health check at `http://localhost:3001/health` which returns the backend version.
+
 Run the frontend with:
 
 ```bash
