@@ -9,6 +9,7 @@ import random
 import re
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
+st.write("App Loaded")
 
 st.markdown('''
     <style>
@@ -130,7 +131,11 @@ def process_reflection():
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
 
-    sareth_response = sareth_gpt_response(st.session_state.conversation)
+    try:
+        sareth_response = sareth_gpt_response(st.session_state.conversation)
+    except Exception as e:
+        st.error(f"Reflection error: {e}")
+        return
 
     if should_surface_glyph(st.session_state.conversation):
         glyph_code = derive_glyph(user_input)
@@ -164,11 +169,15 @@ with st.expander("⚙️ Run REF Engine"):
     depth = st.slider("Max Recursion Depth", 1, 10, 5, key="depth", help="Number of recursion cycles to run")
     tension = st.slider("Tension Threshold", 0.0, 1.0, 0.4, key="tension", help="How easily contradictions surface glyphs")
     if st.button("Run REF Engine", help="Execute the engine with these settings"):
-        state, glyph, halt_reason = run_recursive_engine(depth=depth, threshold=tension)
-        st.success("Run Complete.")
-        st.markdown(f"**🧠 Final State:** `{state}`", help="State returned by the recursion engine")
-        st.markdown(f"**🔣 Glyph ID:** `{glyph}`", help="Symbolic marker produced")
-        st.markdown(f"**⛔ Halt Reason:** `{halt_reason}`", help="Why the engine stopped")
+        try:
+            state, glyph, halt_reason = run_recursive_engine(depth=depth, threshold=tension)
+        except Exception as e:
+            st.error(f"Engine error: {e}")
+        else:
+            st.success("Run Complete.")
+            st.markdown(f"**🧠 Final State:** `{state}`", help="State returned by the recursion engine")
+            st.markdown(f"**🔣 Glyph ID:** `{glyph}`", help="Symbolic marker produced")
+            st.markdown(f"**⛔ Halt Reason:** `{halt_reason}`", help="Why the engine stopped")
 
 st.markdown("---")
 
