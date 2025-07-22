@@ -37,12 +37,12 @@ st.markdown(MOBILE_CSS, unsafe_allow_html=True)
 # Styling for latest Sareth response
 LATEST_CSS = """
 <style>
-.sareth-box {
-    border: 1px solid #ddd;
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
+.sareth-response {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 10px;
 }
 </style>
 """
@@ -246,7 +246,7 @@ tab1, tab2, tab3 = st.tabs(["Reflect", "Conversation History", "Insights"])
 with tab1:
     st.markdown("#### Sareth's Latest Response")
     st.markdown(
-        f"<div class='sareth-box'>{st.session_state.last_sareth_output or '_No response yet_'}</div>",
+        f"<div class='sareth-response'>{st.session_state.last_sareth_output or '_No response yet_'}</div>",
         unsafe_allow_html=True,
     )
 
