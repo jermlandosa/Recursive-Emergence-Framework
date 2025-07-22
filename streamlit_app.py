@@ -118,7 +118,7 @@ def reset_conversation():
     st.session_state.user_input = ""
     st.session_state.search_query = ""
     st.success("Conversation reset!")
-    st.experimental_rerun()
+    st.rerun()
 
 def process_reflection():
     user_input = st.session_state.user_input.strip()
@@ -159,7 +159,7 @@ if not st.session_state.onboarded:
         st.markdown("1. Write a thought in the text box.\n2. Click **Reflect with Sareth**.\n3. Review the glyphs and insights that appear.")
         if st.button("Start Exploring", key="start_onboarding"):
             st.session_state.onboarded = True
-            st.experimental_rerun()
+            st.rerun()
 
 with st.expander("⚙️ Run REF Engine"):
     depth = st.slider("Max Recursion Depth", 1, 10, 5, key="depth", help="Number of recursion cycles to run")
@@ -195,7 +195,7 @@ with tab1:
         process_reflection()
     if submit_prompt:
         st.session_state.user_input = random.choice(reflection_prompts)
-        st.experimental_rerun()
+        st.rerun()
     if submit_reset:
         reset_conversation()
 

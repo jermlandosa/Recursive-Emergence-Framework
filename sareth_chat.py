@@ -137,4 +137,4 @@ if st.sidebar.button("Reset Conversation"):
         st.session_state.history.append(st.session_state.messages)
     st.session_state.messages = []
     st.session_state.glyph_trace = []
-    st.experimental_rerun()
+    st.rerun()
