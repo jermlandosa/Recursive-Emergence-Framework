@@ -6,7 +6,7 @@ IS_CI = os.environ.get("CI") == "true"
 
 
 class SarethV2:
-    def __init__(self, version="REF_v2.0"):
+    def __init__(self, version: str | None = None):
         self.version = version
         self.memory = []
         self.protocols = {

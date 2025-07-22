@@ -1,12 +1,16 @@
-import streamlit as st
-import openai
-from recursor import Recursor
-from test_tools import run_sareth_test
-from main import run_recursive_engine
-from datetime import datetime
-from collections import Counter
+"""Streamlit web UI for the Recursive Emergence Framework."""
+
 import random
 import re
+from collections import Counter
+from datetime import datetime
+
+import openai
+import streamlit as st
+
+from main import run_recursive_engine
+from recursor import Recursor
+from test_tools import run_sareth_test
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 st.write("App Loaded")
@@ -32,9 +36,17 @@ st.markdown(MOBILE_CSS, unsafe_allow_html=True)
 client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
 # Initialize session state
-for key in ["conversation", "glyph_trace", "conversation_history", "user_input", "search_query"]:
+for key in [
+    "conversation",
+    "glyph_trace",
+    "conversation_history",
+    "user_input",
+    "search_query",
+    "error_msg",
+]:
     if key not in st.session_state:
-        st.session_state[key] = [] if 'trace' in key or 'conversation' in key else ""
+        default = [] if "trace" in key or "conversation" in key else ""
+        st.session_state[key] = default
 
 # Track UI state
 if 'show_help' not in st.session_state:
@@ -67,7 +79,12 @@ reflection_prompts = [
 ]
 
 def sanitize_text(text):
-    return re.sub(r"[_*`]", "", text).replace("---", "").strip()
+    """Strip markdown artifacts and timestamps from chat history text."""
+    text = re.sub(r"_\(at .*\)_", "", text)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"_([^_]+)_", r"\1", text)
+    text = re.sub(r"`([^`]+)`", r"\1", text)
+    return text.replace("---", "").strip()
 
 def sareth_gpt_response(conversation_history):
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -78,17 +95,27 @@ def sareth_gpt_response(conversation_history):
     return response.choices[0].message.content
 
 def should_surface_glyph(conversation_history):
-    significance_check_prompt = {"role": "user", "content": "Does the user's reflection reveal a meaningful insight, tension, contradiction, or pattern worth surfacing a symbolic marker for? Answer only 'yes' or 'no'."}
-    recent = conversation_history[-6:]
+    """Check if the latest exchange warrants surfacing a glyph."""
+    significance_check_prompt = {
+        "role": "user",
+        "content": (
+            "Does the user's reflection reveal a meaningful insight, tension, contradiction, or pattern worth surfacing a symbolic marker for? "
+            "Answer only 'yes' or 'no'."
+        ),
+    }
+
+    recent_history = conversation_history[-6:]
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for speaker, text in recent:
-        messages.append({"role": "user" if speaker == "You" else "assistant", "content": sanitize_text(text)})
+    for speaker, text in recent_history:
+        role = "user" if speaker == "You" else "assistant"
+        messages.append({"role": role, "content": sanitize_text(text)})
+
     messages.append(significance_check_prompt)
     try:
         response = client.chat.completions.create(model="gpt-4", messages=messages, temperature=0)
         return response.choices[0].message.content.strip().lower() == "yes"
-    except Exception as e:
-        st.error(f"API Error during glyph significance check: {e}")
+    except Exception as exc:
+        st.error(f"API Error during glyph significance check:\n\n{exc}")
         return False
 
 def derive_glyph(user_input):
@@ -118,31 +145,33 @@ def reset_conversation():
     st.session_state.user_input = ""
     st.session_state.search_query = ""
     st.success("Conversation reset!")
-    st.experimental_rerun()
+    st.rerun()
 
 def process_reflection():
-    user_input = st.session_state.user_input.strip()
-    if not user_input:
-        return
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
-
     try:
+        user_input = st.session_state.user_input.strip()
+        if not user_input:
+            return
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
+
         sareth_response = sareth_gpt_response(st.session_state.conversation)
-    except Exception as e:
-        st.error(f"Reflection error: {e}")
-        return
 
-    if should_surface_glyph(st.session_state.conversation):
-        glyph_code = derive_glyph(user_input)
-        glyph_display = translate_glyph(glyph_code)
-        st.session_state.glyph_trace.append(glyph_display)
-        sareth_response += f"\n\n---\n**Symbolic Marker:** {glyph_display}"
-    else:
-        sareth_response += "\n\n_Note: No symbolic marker surfaced — reflect deeper to uncover more._"
+        if should_surface_glyph(st.session_state.conversation):
+            glyph_code = derive_glyph(user_input)
+            glyph_display = translate_glyph(glyph_code)
+            st.session_state.glyph_trace.append(glyph_display)
+            sareth_response += f"\n\n---\n**Symbolic Marker:** {glyph_display}"
+        else:
+            sareth_response += "\n\n_Note: No symbolic marker surfaced — reflect deeper to uncover more._"
 
-    st.session_state.conversation.append(("Sareth", sareth_response))
-    st.session_state.user_input = ""
+        st.session_state.conversation.append(("Sareth", sareth_response))
+    except Exception as exc:
+        st.session_state.error_msg = f"Reflection error: {exc}"
+    finally:
+        st.session_state.user_input = ""
+        st.rerun()
 
 # --- UI ---
 st.title("🌀 Sareth | Recursive Reflection")
@@ -154,12 +183,16 @@ REF is a symbolic cognitive architecture that guides you through recursive self-
 """
 st.markdown(intro_md)
 
+if st.session_state.error_msg:
+    st.error(st.session_state.error_msg)
+    st.session_state.error_msg = ""
+
 if not st.session_state.onboarded:
     with st.sidebar.expander("👋 Quick Start", expanded=True):
         st.markdown("1. Write a thought in the text box.\n2. Click **Reflect with Sareth**.\n3. Review the glyphs and insights that appear.")
         if st.button("Start Exploring", key="start_onboarding"):
             st.session_state.onboarded = True
-            st.experimental_rerun()
+            st.rerun()
 
 with st.expander("⚙️ Run REF Engine"):
     depth = st.slider("Max Recursion Depth", 1, 10, 5, key="depth", help="Number of recursion cycles to run")
@@ -180,24 +213,21 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["Reflect", "Conversation History", "Insights"])
 
 with tab1:
-    with st.form("reflect_form"):
-        st.text_area(
-            "Your reflection:",
-            key="user_input",
-            height=150,
-            help="Write a thought or question here",
-        )
-        col1, col2, col3 = st.columns(3)
-        submit_reflect = col1.form_submit_button("Reflect with Sareth")
-        submit_prompt = col2.form_submit_button("Prompt")
-        submit_reset = col3.form_submit_button("🔄 Reset")
-    if submit_reflect:
-        process_reflection()
-    if submit_prompt:
+    st.text_area(
+        "Your reflection:",
+        key="user_input",
+        height=150,
+        help="Write a thought or question here",
+    )
+    col1, col2, col3 = st.columns(3)
+    col1.button("Reflect with Sareth", on_click=process_reflection)
+
+    def load_random_prompt():
         st.session_state.user_input = random.choice(reflection_prompts)
-        st.experimental_rerun()
-    if submit_reset:
-        reset_conversation()
+        st.rerun()
+
+    col2.button("Prompt", on_click=load_random_prompt)
+    col3.button("🔄 Reset", on_click=reset_conversation)
 
 with tab2:
     st.caption("Past reflections and responses")

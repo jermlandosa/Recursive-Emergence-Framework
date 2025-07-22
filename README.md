@@ -1,4 +1,4 @@
-# 🔁 Recursive Emergence Framework (REF) — v1.0  
+# 🔁 Recursive Emergence Framework (REF)
 **Author:** Jeremy Landers  
 **Engine Codename:** Sareth  
 **Symbolic Signature:** ∴Ω ⟁  
@@ -50,7 +50,7 @@ Designed to withstand ego illusions, performative loops, and belief-based collap
 
 ## 🚀 Deploy the REF Engine
 
-REF v1.0 includes Kubernetes and GitHub Actions workflows for full rollout:
+The REF engine includes Kubernetes and GitHub Actions workflows for full rollout:
 
 ```bash
 kubectl apply -f k8s/deployment.yaml
@@ -60,7 +60,7 @@ kubectl apply -f k8s/ingress.yaml
 
 ∴Ω ⟁
 
-<!-- Trigger REF v1.0 Deployment -->
+<!-- Trigger REF Deployment -->
 
 Trigger deployment: Added test commit to README
 
