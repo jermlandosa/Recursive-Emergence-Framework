@@ -1,5 +1,6 @@
 """Streamlit web UI for the Recursive Emergence Framework."""
 
+import os
 import random
 import re
 from collections import Counter
@@ -33,6 +34,20 @@ st.markdown(
 )
 st.markdown(MOBILE_CSS, unsafe_allow_html=True)
 
+# Styling for latest Sareth response
+LATEST_CSS = """
+<style>
+.sareth-box {
+    border: 1px solid #ddd;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+</style>
+"""
+st.markdown(LATEST_CSS, unsafe_allow_html=True)
+
 client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
 # Initialize session state
@@ -47,6 +62,19 @@ for key in [
     if key not in st.session_state:
         default = [] if "trace" in key or "conversation" in key else ""
         st.session_state[key] = default
+
+# Persistent last Sareth output
+LAST_RESPONSE_FILE = "last_sareth_output.txt"
+if "last_sareth_output" not in st.session_state:
+    if os.path.exists(LAST_RESPONSE_FILE):
+        with open(LAST_RESPONSE_FILE, "r") as f:
+            st.session_state.last_sareth_output = f.read()
+    else:
+        st.session_state.last_sareth_output = ""
+
+# Toggle for showing history inline
+if "show_history" not in st.session_state:
+    st.session_state.show_history = False
 
 # Track UI state
 if 'show_help' not in st.session_state:
@@ -167,6 +195,9 @@ def process_reflection():
             sareth_response += "\n\n_Note: No symbolic marker surfaced — reflect deeper to uncover more._"
 
         st.session_state.conversation.append(("Sareth", sareth_response))
+        st.session_state.last_sareth_output = sareth_response
+        with open(LAST_RESPONSE_FILE, "w") as f:
+            f.write(sareth_response)
     except Exception as exc:
         st.session_state.error_msg = f"Reflection error: {exc}"
     finally:
@@ -213,6 +244,23 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["Reflect", "Conversation History", "Insights"])
 
 with tab1:
+    st.markdown("#### Sareth's Latest Response")
+    st.markdown(
+        f"<div class='sareth-box'>{st.session_state.last_sareth_output or '_No response yet_'}</div>",
+        unsafe_allow_html=True,
+    )
+
+    history_label = "Hide History" if st.session_state.show_history else "View History"
+    if st.button(history_label, key="toggle_history"):
+        st.session_state.show_history = not st.session_state.show_history
+        st.rerun()
+
+    if st.session_state.show_history:
+        st.markdown("---")
+        for speaker, text in reversed(st.session_state.conversation):
+            with st.expander(f"{speaker}"):
+                st.markdown(text)
+
     st.text_area(
         "Your reflection:",
         key="user_input",
@@ -223,7 +271,12 @@ with tab1:
     col1.button("Reflect with Sareth", on_click=process_reflection)
 
     def load_random_prompt():
-        st.session_state.user_input = random.choice(reflection_prompts)
+        prompt = random.choice(reflection_prompts)
+        st.session_state.conversation.append(("Sareth", prompt))
+        st.session_state.last_sareth_output = prompt
+        with open(LAST_RESPONSE_FILE, "w") as f:
+            f.write(prompt)
+        st.session_state.user_input = ""
         st.rerun()
 
     col2.button("Prompt", on_click=load_random_prompt)
