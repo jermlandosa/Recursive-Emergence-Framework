@@ -1,12 +1,16 @@
-import streamlit as st
-import openai
-from recursor import Recursor
-from test_tools import run_sareth_test
-from main import run_recursive_engine
-from datetime import datetime
-from collections import Counter
+"""Streamlit web UI for the Recursive Emergence Framework."""
+
 import random
 import re
+from collections import Counter
+from datetime import datetime
+
+import openai
+import streamlit as st
+
+from main import run_recursive_engine
+from recursor import Recursor
+from test_tools import run_sareth_test
 
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 st.write("App Loaded")
