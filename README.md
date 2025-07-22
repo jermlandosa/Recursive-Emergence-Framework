@@ -101,4 +101,6 @@ To deploy only the `frontend` directory with Vercel:
    }
    ```
 
+The `rootDirectory` field is configured in the Vercel dashboard and should not be included in `vercel.json`.
+
 Vercel will build the project from that folder and serve the contents of `dist/`.
