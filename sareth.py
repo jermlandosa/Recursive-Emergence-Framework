@@ -28,7 +28,7 @@ def is_deep(insight: str) -> bool:
     return not (too_short or vague)
 
 class Sareth:
-    def __init__(self, name: str = "Sareth", version: str = "REF_3.1"):
+    def __init__(self, name: str = "Sareth", version: str | None = None):
         self.name = name
         self.version = version
         self.memory = []
