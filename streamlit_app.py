@@ -11,27 +11,23 @@ import re
 st.set_page_config(page_title="Sareth | Recursive Reflection", layout="wide")
 st.write("App Loaded")
 
-st.markdown('''
-    <style>
-    @media only screen and (max-width: 600px) {
-        .stButton>button {
-            padding: 0.75em 1.5em;
-            font-size: 1.1em;
-            margin-bottom: 12px;
-        }
-        textarea {
-            width: 100% !important;
-        }
-        .stTextInput input {
-            font-size: 1.1em;
-        }
-    }
-    .block-container {
-        max-width: 700px;
-        margin: auto;
-    }
-    </style>
-''', unsafe_allow_html=True)
+# Mobile responsive styling
+MOBILE_CSS = """
+<style>
+@media (max-width: 768px) {
+    .block-container {padding:1rem !important;}
+    .stButton>button {width:100%;margin-top:.5rem;}
+    textarea,input {font-size:1.1rem !important;}
+}
+.block-container {max-width:700px;margin:auto;}
+</style>
+"""
+
+st.markdown(
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    unsafe_allow_html=True,
+)
+st.markdown(MOBILE_CSS, unsafe_allow_html=True)
 
 client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
@@ -184,12 +180,24 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["Reflect", "Conversation History", "Insights"])
 
 with tab1:
-    st.text_area("Your reflection:", key="user_input", height=150, help="Write a thought or question here")
-    st.button("Reflect with Sareth", on_click=process_reflection, help="Submit your reflection for analysis")
-    if st.button("Generate Reflection Prompt", help="Insert a random reflection prompt"):
+    with st.form("reflect_form"):
+        st.text_area(
+            "Your reflection:",
+            key="user_input",
+            height=150,
+            help="Write a thought or question here",
+        )
+        col1, col2, col3 = st.columns(3)
+        submit_reflect = col1.form_submit_button("Reflect with Sareth")
+        submit_prompt = col2.form_submit_button("Prompt")
+        submit_reset = col3.form_submit_button("🔄 Reset")
+    if submit_reflect:
+        process_reflection()
+    if submit_prompt:
         st.session_state.user_input = random.choice(reflection_prompts)
         st.experimental_rerun()
-    st.button("🔄 Reset Conversation", on_click=reset_conversation, help="Clear the conversation and start over")
+    if submit_reset:
+        reset_conversation()
 
 with tab2:
     st.caption("Past reflections and responses")
