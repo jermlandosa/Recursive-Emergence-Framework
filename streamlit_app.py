@@ -36,9 +36,17 @@ st.markdown(MOBILE_CSS, unsafe_allow_html=True)
 client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
 # Initialize session state
-for key in ["conversation", "glyph_trace", "conversation_history", "user_input", "search_query"]:
+for key in [
+    "conversation",
+    "glyph_trace",
+    "conversation_history",
+    "user_input",
+    "search_query",
+    "error_msg",
+]:
     if key not in st.session_state:
-        st.session_state[key] = [] if 'trace' in key or 'conversation' in key else ""
+        default = [] if "trace" in key or "conversation" in key else ""
+        st.session_state[key] = default
 
 # Track UI state
 if 'show_help' not in st.session_state:
@@ -88,12 +96,8 @@ def should_surface_glyph(conversation_history):
     for speaker, text in recent:
         messages.append({"role": "user" if speaker == "You" else "assistant", "content": sanitize_text(text)})
     messages.append(significance_check_prompt)
-    try:
-        response = client.chat.completions.create(model="gpt-4", messages=messages, temperature=0)
-        return response.choices[0].message.content.strip().lower() == "yes"
-    except Exception as e:
-        st.error(f"API Error during glyph significance check: {e}")
-        return False
+    response = client.chat.completions.create(model="gpt-4", messages=messages, temperature=0)
+    return response.choices[0].message.content.strip().lower() == "yes"
 
 def derive_glyph(user_input):
     engine = Recursor(max_depth=10, tension_threshold=0.7)
@@ -125,28 +129,30 @@ def reset_conversation():
     st.rerun()
 
 def process_reflection():
-    user_input = st.session_state.user_input.strip()
-    if not user_input:
-        return
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
-
     try:
+        user_input = st.session_state.user_input.strip()
+        if not user_input:
+            return
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        st.session_state.conversation.append(("You", f"{user_input} _(at {timestamp})_"))
+
         sareth_response = sareth_gpt_response(st.session_state.conversation)
-    except Exception as e:
-        st.error(f"Reflection error: {e}")
-        return
 
-    if should_surface_glyph(st.session_state.conversation):
-        glyph_code = derive_glyph(user_input)
-        glyph_display = translate_glyph(glyph_code)
-        st.session_state.glyph_trace.append(glyph_display)
-        sareth_response += f"\n\n---\n**Symbolic Marker:** {glyph_display}"
-    else:
-        sareth_response += "\n\n_Note: No symbolic marker surfaced — reflect deeper to uncover more._"
+        if should_surface_glyph(st.session_state.conversation):
+            glyph_code = derive_glyph(user_input)
+            glyph_display = translate_glyph(glyph_code)
+            st.session_state.glyph_trace.append(glyph_display)
+            sareth_response += f"\n\n---\n**Symbolic Marker:** {glyph_display}"
+        else:
+            sareth_response += "\n\n_Note: No symbolic marker surfaced — reflect deeper to uncover more._"
 
-    st.session_state.conversation.append(("Sareth", sareth_response))
-    st.session_state.user_input = ""
+        st.session_state.conversation.append(("Sareth", sareth_response))
+    except Exception as exc:
+        st.session_state.error_msg = f"Reflection error: {exc}"
+    finally:
+        st.session_state.user_input = ""
+        st.rerun()
 
 # --- UI ---
 st.title("🌀 Sareth | Recursive Reflection")
@@ -157,6 +163,10 @@ intro_md = """
 REF is a symbolic cognitive architecture that guides you through recursive self-reflection. Enter a thought below and press **Reflect with Sareth** to surface symbolic markers known as *glyphs*. Use the REF Engine section for deeper experimentation with recursion settings.
 """
 st.markdown(intro_md)
+
+if st.session_state.error_msg:
+    st.error(st.session_state.error_msg)
+    st.session_state.error_msg = ""
 
 if not st.session_state.onboarded:
     with st.sidebar.expander("👋 Quick Start", expanded=True):
