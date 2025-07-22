@@ -1,3 +1,5 @@
 {
-  "rootDirectory": "frontend"
+  "buildCommand": "pip install -r requirements.txt",
+  "devCommand": "streamlit run streamlit_app.py",
+  "outputDirectory": "."
 }
