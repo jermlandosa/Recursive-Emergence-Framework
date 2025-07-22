@@ -184,24 +184,21 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["Reflect", "Conversation History", "Insights"])
 
 with tab1:
-    with st.form("reflect_form"):
-        st.text_area(
-            "Your reflection:",
-            key="user_input",
-            height=150,
-            help="Write a thought or question here",
-        )
-        col1, col2, col3 = st.columns(3)
-        submit_reflect = col1.form_submit_button("Reflect with Sareth")
-        submit_prompt = col2.form_submit_button("Prompt")
-        submit_reset = col3.form_submit_button("🔄 Reset")
-    if submit_reflect:
-        process_reflection()
-    if submit_prompt:
+    st.text_area(
+        "Your reflection:",
+        key="user_input",
+        height=150,
+        help="Write a thought or question here",
+    )
+    col1, col2, col3 = st.columns(3)
+    col1.button("Reflect with Sareth", on_click=process_reflection)
+
+    def load_random_prompt():
         st.session_state.user_input = random.choice(reflection_prompts)
         st.rerun()
-    if submit_reset:
-        reset_conversation()
+
+    col2.button("Prompt", on_click=load_random_prompt)
+    col3.button("🔄 Reset", on_click=reset_conversation)
 
 with tab2:
     st.caption("Past reflections and responses")
