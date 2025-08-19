@@ -1,0 +1,4 @@
+{
+  "require_friction_alarm": false,
+  "enforce_signed_commits": false
+}
