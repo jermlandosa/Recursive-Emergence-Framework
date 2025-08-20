@@ -78,6 +78,8 @@ npm start
 
 Once running, you can perform a basic health check at `http://localhost:3001/health` which returns the backend version.
 
+The `/process-recursion` endpoint uses OpenAI's ChatGPT to turn user input into reflective insights. Set an `OPENAI_API_KEY` environment variable before starting the server to enable this behavior.
+
 Run the frontend with:
 
 ```bash
