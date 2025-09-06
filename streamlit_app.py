@@ -20,6 +20,7 @@ def _git_sha():
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
     except Exception:
         return "unknown"
+
 st.caption(f"Deployed commit: `{_git_sha()}` on branch: `Main`")
 
 # --- Secrets resolution with fallbacks ---
@@ -40,11 +41,13 @@ def _resolve_api_key() -> str:
 # --- Secrets check (with fallback keys) ---
 api_key = _resolve_api_key()
 if not api_key:
-    st.error("No API key found. Add one of:\n"
-             "- OPENAI_API_KEY = \"sk-...\"\n"
-             "- [openai]\napi_key = \"sk-...\"\n"
-             "- [serith]\napi_key = \"sk-...\"\n"
-             "in Streamlit Cloud → App → Settings → Secrets.")
+    st.error(
+        "No API key found. Add one of:\n"
+        "- OPENAI_API_KEY = \"sk-...\"\n"
+        "- [openai]\\napi_key = \"sk-...\"\n"
+        "- [serith]\\napi_key = \"sk-...\"\n"
+        "in Streamlit Cloud → App → Settings → Secrets."
+    )
     st.stop()
 
 client = OpenAI(api_key=api_key)
@@ -98,7 +101,6 @@ if user_text:
         # Parse trailing REF JSON block (if present) to show glyph separately
         glyph_line = ""
         try:
-            # find last {...} JSON object on a single line
             last_line = acc.splitlines()[-1].strip()
             if last_line.startswith("{") and last_line.endswith("}"):
                 data = json.loads(last_line)
@@ -114,5 +116,8 @@ if user_text:
 
         if glyph_line:
             out.markdown(acc + ("\n\n---\n" + glyph_line))
-        st.session_state.messages.append({"role": "assistant", "content": acc + ("\n\n---\n" + glyph_line if glyph_line else "")})
+        st.session_state.messages.append(
+            {"role": "assistant", "content": acc + ("\n\n---\n" + glyph_line if glyph_line else "")}
+        )
+
 
