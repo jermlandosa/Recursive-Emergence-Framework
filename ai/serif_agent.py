@@ -1,6 +1,10 @@
 import openai
+import os
 
-openai.api_key = 'YOUR_OPENAI_API_KEY'
+# Configure OpenAI with a secret key from the environment
+openai.api_key = os.getenv("OPENAI_API_KEY")
+if openai.api_key is None:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
 
 def serif_prompt(user_input, conversation_context):
     prompt = f"""

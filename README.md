@@ -68,6 +68,14 @@ Trigger deployment: Added test commit to README
 ## 🌐 Frontend & Backend
 The `frontend` directory contains a React implementation of the REF onboarding screens and interaction hub. The `backend` directory exposes an Express API for saving onboarding responses and performing simple recursion processing.
 
+### OpenAI API key
+
+Both the backend and any local Python helpers require an OpenAI API key. Set it in your environment before running components:
+
+```bash
+export OPENAI_API_KEY="your-secret-key"
+```
+
 Run the backend with:
 
 ```bash

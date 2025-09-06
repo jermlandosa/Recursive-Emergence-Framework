@@ -4,6 +4,8 @@ import os
 
 app = Flask(__name__)
 openai.api_key = os.getenv("OPENAI_API_KEY")
+if openai.api_key is None:
+    raise ValueError("OPENAI_API_KEY environment variable is not set")
 
 @app.route('/process', methods=['POST'])
 def process():
