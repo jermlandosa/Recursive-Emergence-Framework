@@ -34,19 +34,19 @@ st.markdown(
 )
 st.markdown(MOBILE_CSS, unsafe_allow_html=True)
 
-# Styling for latest Sareth response
-LATEST_CSS = """
-<style>
-.sareth-response {
-    background-color: #1e1e1e !important;
-    color: #ffffff !important;
-    padding: 10px;
-    border-radius: 5px;
-    margin-top: 10px;
-}
-</style>
-"""
-st.markdown(LATEST_CSS, unsafe_allow_html=True)
+# Styling for latest Sareth response (deprecated but kept for potential reuse)
+# LATEST_CSS = """
+# <style>
+# .sareth-response {
+#     background-color: #1e1e1e !important;
+#     color: #ffffff !important;
+#     padding: 10px;
+#     border-radius: 5px;
+#     margin-top: 10px;
+# }
+# </style>
+# """
+# st.markdown(LATEST_CSS, unsafe_allow_html=True)
 
 client = openai.Client(api_key=st.secrets["openai"]["api_key"])
 
@@ -55,7 +55,6 @@ for key in [
     "conversation",
     "glyph_trace",
     "conversation_history",
-    "user_input",
     "search_query",
     "error_msg",
 ]:
@@ -71,10 +70,6 @@ if "last_sareth_output" not in st.session_state:
             st.session_state.last_sareth_output = f.read()
     else:
         st.session_state.last_sareth_output = ""
-
-# Toggle for showing history inline
-if "show_history" not in st.session_state:
-    st.session_state.show_history = False
 
 # Track UI state
 if 'show_help' not in st.session_state:
@@ -170,14 +165,14 @@ def reset_conversation():
         st.session_state.conversation_history.append((datetime.now().strftime("%Y-%m-%d %H:%M:%S"), st.session_state.conversation.copy()))
     st.session_state.conversation = []
     st.session_state.glyph_trace = []
-    st.session_state.user_input = ""
     st.session_state.search_query = ""
     st.success("Conversation reset!")
     st.rerun()
 
-def process_reflection():
+
+def process_reflection(user_input: str) -> None:
     try:
-        user_input = st.session_state.user_input.strip()
+        user_input = user_input.strip()
         if not user_input:
             return
 
@@ -201,7 +196,6 @@ def process_reflection():
     except Exception as exc:
         st.session_state.error_msg = f"Reflection error: {exc}"
     finally:
-        st.session_state.user_input = ""
         st.rerun()
 
 # --- UI ---
@@ -244,31 +238,11 @@ st.markdown("---")
 tab1, tab2, tab3 = st.tabs(["Reflect", "Conversation History", "Insights"])
 
 with tab1:
-    st.markdown("#### Sareth's Latest Response")
-    st.markdown(
-        f"<div class='sareth-response'>{st.session_state.last_sareth_output or '_No response yet_'}</div>",
-        unsafe_allow_html=True,
-    )
-
-    history_label = "Hide History" if st.session_state.show_history else "View History"
-    if st.button(history_label, key="toggle_history"):
-        st.session_state.show_history = not st.session_state.show_history
-        st.rerun()
-
-    if st.session_state.show_history:
-        st.markdown("---")
-        for speaker, text in reversed(st.session_state.conversation):
-            with st.expander(f"{speaker}"):
-                st.markdown(text)
-
-    st.text_area(
-        "Your reflection:",
-        key="user_input",
-        height=150,
-        help="Write a thought or question here",
-    )
-    col1, col2, col3 = st.columns(3)
-    col1.button("Reflect with Sareth", on_click=process_reflection)
+    st.markdown("#### Conversation")
+    for speaker, text in st.session_state.conversation:
+        role = "user" if speaker == "You" else "assistant"
+        with st.chat_message(role):
+            st.markdown(text)
 
     def load_random_prompt():
         prompt = random.choice(reflection_prompts)
@@ -276,11 +250,13 @@ with tab1:
         st.session_state.last_sareth_output = prompt
         with open(LAST_RESPONSE_FILE, "w") as f:
             f.write(prompt)
-        st.session_state.user_input = ""
-        st.rerun()
 
-    col2.button("Prompt", on_click=load_random_prompt)
-    col3.button("🔄 Reset", on_click=reset_conversation)
+    col1, col2 = st.columns(2)
+    col1.button("Prompt", on_click=load_random_prompt)
+    col2.button("🔄 Reset", on_click=reset_conversation)
+
+    if prompt := st.chat_input("Your reflection"):
+        process_reflection(prompt)
 
 with tab2:
     st.caption("Past reflections and responses")
