@@ -1,8 +1,8 @@
-openai
+openai>=1.0.0
 numpy
 transformers
 requests
 pytest
 matplotlib
 nltk
-streamlit
+streamlit>=1.36.0

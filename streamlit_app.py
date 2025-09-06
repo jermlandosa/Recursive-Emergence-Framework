@@ -1,102 +1,77 @@
-"""Streamlit app for the Recursive Emergence Framework.
-
-This refactored version focuses on safe startup and graceful degradation so the
-app can boot even when optional dependencies, secrets, or engines are missing.
-"""
-
-from __future__ import annotations
-
-import os
-import sys
-import traceback
-from typing import Callable, Optional
-
+import subprocess
 import streamlit as st
+from openai import OpenAI
 
+st.set_page_config(page_title="REF • Sareth", page_icon="🔁")
 
-def boot_panel() -> None:
-    """Render diagnostic information in the sidebar for safe boot."""
-    with st.sidebar:
-        st.header("Boot Info")
-        st.markdown(f"**Python:** {sys.version.split()[0]}")
-        cwd = os.getcwd()
-        st.markdown(f"**CWD:** `{cwd}`")
-        try:
-            st.markdown("**Files:**")
-            st.write(sorted(os.listdir(cwd)))
-        except Exception as exc:  # pragma: no cover - extremely unlikely
-            st.warning(f"Unable to list directory contents: {exc}")
+SYSTEM_PROMPT = (
+    "You are Sareth, the REF assistant. Be concise, deep, and precise. "
+    "Default to recursive truth checks and avoid fluff."
+)
 
-
-def load_api_keys() -> Optional[str]:
-    """Retrieve the OpenAI API key from Streamlit secrets or the environment."""
-    key = None
+# Show deployed commit for sanity checks
+def _git_sha():
     try:
-        # Secrets may contain either a flat key or nested under "openai"
-        key = st.secrets.get("OPENAI_API_KEY") or st.secrets.get("openai", {}).get(
-            "api_key"
-        )
+        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
     except Exception:
-        # Accessing st.secrets outside Streamlit or without config can raise
-        key = None
+        return "unknown"
+st.caption(f"Deployed commit: `{_git_sha()}` on branch: `Main`")
 
-    key = key or os.environ.get("OPENAI_API_KEY")
-    if key:
-        os.environ.setdefault("OPENAI_API_KEY", key)
-    else:
-        st.sidebar.warning("OPENAI_API_KEY not found – running in demo mode.")
-    return key
-
-
-def resolve_engine() -> Optional[Callable[[str], str]]:
-    """Attempt to import a `run_ref` function from available modules."""
-    root = os.path.dirname(__file__)
-    if root not in sys.path:
-        sys.path.append(root)
-
-    candidates = [("ref_engine", "run_ref"), ("sareth", "main")]
-    for module_name, attr in candidates:
-        try:
-            module = __import__(module_name, fromlist=[attr])
-            return getattr(module, attr)
-        except Exception:
-            continue
-
-    st.sidebar.error("REF engine import failed; input will be echoed back.")
-    return None
-
-
-def handle_prompt(prompt: str, runner: Optional[Callable[[str], str]]) -> str:
-    """Run the REF engine or echo the prompt if unavailable."""
-    if not runner:
-        return prompt
-    try:
-        return runner(prompt)
-    except Exception:
-        st.error("REF engine error:")
-        st.exception(traceback.format_exc())
-        return prompt
-
-
-def main() -> None:
-    st.set_page_config(
-        page_title="Sareth | Recursive Reflection", layout="wide", initial_sidebar_state="expanded"
+# --- Secrets check ---
+api_key = st.secrets.get("OPENAI_API_KEY", "")
+if not api_key:
+    st.error(
+        "Missing OPENAI_API_KEY in Streamlit Secrets. "
+        "In Streamlit Cloud: App → Settings → Secrets → add OPENAI_API_KEY."
     )
-    boot_panel()
-    load_api_keys()
-    run_ref = resolve_engine()
+    st.stop()
 
-    st.title("Sareth Streamlit Demo")
-    user_prompt = st.text_area("Enter your prompt")
+client = OpenAI(api_key=api_key)
 
-    if st.button("Submit"):
-        if not user_prompt.strip():
-            st.warning("Please enter a prompt.")
-        else:
-            output = handle_prompt(user_prompt, run_ref)
-            st.write(output)
+# --- State ---
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
 
+st.title("REF • Sareth")
 
-if __name__ == "__main__":
-    main()
+with st.sidebar:
+    st.subheader("Settings")
+    model = st.text_input("OpenAI model", value="gpt-4o-mini")
+    if st.button("Reset chat"):
+        st.session_state.messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        st.rerun()
+
+# Render history (no system)
+for m in st.session_state.messages:
+    if m["role"] == "system":
+        continue
+    with st.chat_message("user" if m["role"] == "user" else "assistant"):
+        st.markdown(m["content"])
+
+# Input + stream
+user_text = st.chat_input("Type your message…")
+if user_text:
+    st.session_state.messages.append({"role": "user", "content": user_text})
+    with st.chat_message("user"):
+        st.markdown(user_text)
+
+    with st.chat_message("assistant"):
+        out = st.empty()
+        acc = ""
+
+        stream = client.chat.completions.create(
+            model=model,
+            temperature=0.3,
+            stream=True,
+            # include system so Sareth stays in effect
+            messages=st.session_state.messages,
+        )
+
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            if delta:
+                acc += delta
+                out.markdown(acc)
+
+        st.session_state.messages.append({"role": "assistant", "content": acc})
 
