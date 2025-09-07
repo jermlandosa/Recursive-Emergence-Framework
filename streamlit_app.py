@@ -17,8 +17,10 @@ SYSTEM_PROMPT = (
     "and depth integrity by default.\n\n"
     "OUTPUT CONTRACT:\n"
     "1) First, produce the natural-language reply for the user (streamed).\n"
-    "2) Then, on the FINAL line ONLY, append a single-line JSON object with this shape:\n"
-    '{"ref":{"glyph":"G1|G2|G3|G4|G5|G6|G7","glyph_meaning":"short context-aware phrase","plan":{"goal":"...","steps":["step1","step2"],"question":"one precise focusing question"},"suggestions":["short next message 1","short next message 2"]}}\n"
+    "2) Then, on the FINAL line ONLY, append a single-line JSON object with this shape: "
+    "{\"ref\":{\"glyph\":\"G1|G2|G3|G4|G5|G6|G7\",\"glyph_meaning\":\"short context-aware phrase\","
+    "\"plan\":{\"goal\":\"...\",\"steps\":[\"step1\",\"step2\"],\"question\":\"one precise focusing question\"},"
+    "\"suggestions\":[\"short next message 1\",\"short next message 2\"]}}\n"
     "Do not add commentary after the JSON. Keep JSON compact, no newlines inside it."
 )
 
