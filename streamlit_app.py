@@ -39,7 +39,7 @@ GLYPH_FALLBACKS = {
 }
 
 # =================== Utilities ===================
-def _git_sha() -> string:
+def _git_sha() -> str:
     try:
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
     except Exception:
