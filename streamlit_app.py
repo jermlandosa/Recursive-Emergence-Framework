@@ -1,8 +1,11 @@
+# streamlit_app.py — REF • Sareth (cutting coach edition)
+
 import json
 import sqlite3
 import subprocess
 from datetime import datetime
 from pathlib import Path
+
 import streamlit as st
 from openai import OpenAI
 
@@ -11,16 +14,18 @@ st.set_page_config(page_title="REF • Sareth", page_icon="🔁", layout="center
 DB_PATH = Path("ref_history.db")
 
 SYSTEM_PROMPT = (
-    "You are Sareth, the REF assistant for the Recursive Emergence Framework (REF). "
-    "Your style: concise, deep, precise; no filler. Apply truth-rich recursion, contradiction checks, "
-    "and depth integrity by default.\n\n"
-    "OUTPUT CONTRACT:\n"
-    "1) First, produce the natural-language reply for the user (streamed).\n"
-    "2) Then, on the FINAL line ONLY, append a single-line JSON object with this shape: "
-    "{\"ref\":{\"glyph\":\"G1|G2|G3|G4|G5|G6|G7\",\"glyph_meaning\":\"short context-aware phrase\","
-    "\"plan\":{\"goal\":\"...\",\"steps\":[\"step1\",\"step2\"],\"question\":\"one precise focusing question\"},"
-    "\"suggestions\":[\"short next message 1\",\"short next message 2\"]}} "
-    "Do not add commentary after the JSON. Keep JSON compact, no newlines inside it."
+    "You are **Sareth**, a razor-sharp coach built on the Recursive Emergence Framework (REF).\n"
+    "Mission: drive clarity and momentum fast. No fluff. Default to contradiction checks and depth integrity.\n\n"
+    "REPLY FORMAT (always):\n"
+    "1) **TL;DR:** one sentence outcome or insight.\n"
+    "2) **Why this matters:** one punchy line framing value to the user.\n"
+    "3) **Do now (2–3 steps):** numbered, concrete next moves.\n"
+    "4) **Incisive question:** one precise question that forces progress.\n"
+    "5) If helpful, add brief supporting detail afterward.\n\n"
+    "FINAL LINE (single line JSON, no extra text): "
+    "{\"ref\":{\"glyph\":\"G1|G2|G3|G4|G5|G6|G7\",\"glyph_meaning\":\"context phrase\","
+    "\"plan\":{\"goal\":\"...\",\"steps\":[\"step1\",\"step2\"],\"question\":\"one precise question\"},"
+    "\"suggestions\":[\"chip 1\",\"chip 2\",\"chip 3\"]}}"
 )
 
 GLYPH_FALLBACKS = {
@@ -34,7 +39,7 @@ GLYPH_FALLBACKS = {
 }
 
 # =================== Utilities ===================
-def _git_sha() -> str:
+def _git_sha() -> string:
     try:
         return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
     except Exception:
@@ -52,6 +57,17 @@ def _resolve_api_key() -> str:
     if "serith" in st.secrets and st.secrets["serith"].get("api_key"):
         return st.secrets["serith"]["api_key"]
     return ""
+
+def _clean_visible(text: str) -> str:
+    """Hide control/meta lines from what we render to the user."""
+    lines = []
+    for ln in (text or "").splitlines():
+        s = ln.strip()
+        # hide our steering tags
+        if s.startswith("[meta:") and s.endswith("]"):
+            continue
+        lines.append(ln)
+    return "\n".join(lines).strip()
 
 api_key = _resolve_api_key()
 if not api_key:
@@ -159,7 +175,11 @@ def last_insight(session_id: int):
         return {
             "glyph": glyph,
             "glyph_meaning": meaning,
-            "plan": {"goal": goal, "steps": json.loads(steps or "[]"), "question": question},
+            "plan": {
+                "goal": goal,
+                "steps": json.loads(steps or "[]"),
+                "question": question
+            },
             "suggestions": json.loads(suggestions or "[]"),
         }
 
@@ -207,19 +227,28 @@ with st.sidebar:
     depth_on = st.toggle("Depth recursion hints", value=True)
     st.caption("Sessions persist while the container lives. Redeploy resets storage.")
 
+# =================== Header & Quick Start ===================
 st.title("REF • Sareth")
+with st.container():
+    st.info(
+        "**What this is:** a cutting REF coach that turns any prompt into clear steps.\n\n"
+        "**How to use:** state your aim or paste a messy thought. Sareth returns TL;DR, why it matters, "
+        "2–3 actions, and one incisive question.\n\n"
+        "**Why use it:** rapid clarity → forward motion. Less rumination, more progress.",
+        icon="⚡",
+    )
 
 # =================== History ===================
 for m in st.session_state.messages:
     if m["role"] == "system":
         continue
     with st.chat_message("user" if m["role"] == "user" else "assistant"):
-        st.markdown(m["content"])
+        st.markdown(_clean_visible(m["content"]))
 
 # =================== Input & Stream ===================
 prompt = st.chat_input("Type your message…")
 if prompt:
-    # Augment the message with light meta (lets the model adapt depth/coaching)
+    # Add hidden steering tags for depth/coaching (kept out of visible transcript)
     user_msg = prompt
     if depth_on:
         user_msg += "\n\n[meta: depth=on]"
@@ -247,12 +276,12 @@ if prompt:
             delta = chunk.choices[0].delta.content or ""
             if delta:
                 acc += delta
-                out.markdown(acc)
+                out.markdown(_clean_visible(acc))
 
         # Parse trailing JSON meta (REF block)
         ref_meta = None
         try:
-            last_line = acc.splitlines()[-1].strip()
+            last_line = (acc.splitlines()[-1] if acc.splitlines() else "").strip()
             if last_line.startswith("{") and last_line.endswith("}"):
                 data = json.loads(last_line)
                 if "ref" in data and isinstance(data["ref"], dict):
@@ -263,11 +292,11 @@ if prompt:
             pass
 
         # Show final assistant text
-        out.markdown(acc)
+        out.markdown(_clean_visible(acc))
 
         # Guidance panel
         if ref_meta:
-            glyph = ref_meta.get("glyph", "")
+            glyph = ref_meta.get("glyph", "") or ""
             meaning = ref_meta.get("glyph_meaning") or GLYPH_FALLBACKS.get(glyph, "")
             plan = ref_meta.get("plan", {}) or {}
             suggestions = ref_meta.get("suggestions", []) or []
@@ -281,14 +310,22 @@ if prompt:
                     st.write(f"**Goal:** {plan.get('goal','—')}")
                     steps = plan.get("steps") or []
                     if steps:
-                        st.write("**Next steps:**")
+                        st.write("**Do now:**")
                         for i, s in enumerate(steps[:3], 1):
                             st.write(f"{i}. {s}")
                     if plan.get("question"):
-                        st.write(f"**Focusing question:** {plan['question']}")
+                        st.write(f"**Incisive question:** {plan['question']}")
                     if suggestions:
                         st.write("**Suggestions:**")
-                        st.write(" · " + " · ".join(suggestions[:4]))
+                        cols = st.columns(min(4, len(suggestions[:4])) or 1)
+                        for i, sug in enumerate(suggestions[:4]):
+                            if cols[i].button(sug):
+                                # queue a user message with steering meta
+                                follow = sug + ("\n\n[meta: depth=on]" if depth_on else "") + f"\n[meta: coaching={coaching}]"
+                                st.session_state.messages.append({"role": "user", "content": follow})
+                                if st.session_state.session_id:
+                                    save_message(st.session_state.session_id, "user", sug)
+                                st.rerun()
 
             # Persist the insight
             if st.session_state.session_id:
