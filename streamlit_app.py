@@ -3,12 +3,14 @@ import streamlit as st
 from openai import OpenAI
 import sareth_chat
 
+# --- OpenAI client ---
 api_key = st.secrets.get("openai", {}).get("api_key") or os.getenv("OPENAI_API_KEY")
 if not api_key:
-    st.error("Missing OpenAI API key. Add it in Settings → Secrets.")
+    st.error("Missing OpenAI API key. Add it in Settings → Secrets or set OPENAI_API_KEY.")
     st.stop()
 client = OpenAI(api_key=api_key)
 
+# --- UI header ---
 st.title("REF • Sareth")
 st.write(
     "We’re already inside the field. You speak how you speak; I move with you. "
@@ -16,22 +18,24 @@ st.write(
     "Ask for “steps” if you want structure; otherwise we stay fluid."
 )
 
-# --- session state setup ---
+# --- session state ---
 if "history" not in st.session_state:
-    st.session_state.history = []
+    st.session_state.history = []  # list of {"role": "user"/"assistant", "content": str}
 
-# --- Chat input ---
+# --- 1) RENDER HISTORY (only place we display messages) ---
+for msg in st.session_state.history:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# --- 2) HANDLE NEW INPUT (no immediate display here) ---
 user_text = st.chat_input("Speak in your own cadence. I’ll move with you.")
-
 if user_text:
-    # 1. Show user's message
-    with st.chat_message("user"):
-        st.markdown(user_text)
+    # Append user's message once
+    if not (st.session_state.history and st.session_state.history[-1]["role"] == "user"
+            and st.session_state.history[-1]["content"] == user_text):
+        st.session_state.history.append({"role": "user", "content": user_text})
 
-    # 2. Append user message to history
-    st.session_state.history.append({"role": "user", "content": user_text})
-
-    # 3. Generate reply ONLY ONCE
+    # Generate reply once (ensure sareth_chat.generate_reply DOES NOT append to history)
     reply = sareth_chat.generate_reply(
         client=client,
         history=st.session_state.history,
@@ -41,14 +45,8 @@ if user_text:
         max_tokens=320,
     )
 
-    # 4. Append assistant reply once
+    # Append assistant reply once
     st.session_state.history.append({"role": "assistant", "content": reply})
 
-    # 5. Show assistant reply immediately
-    with st.chat_message("assistant"):
-        st.markdown(reply)
-
-# --- Render previous history ---
-for msg in st.session_state.history:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+    # Re-render so the messages appear via the history loop (avoids duplicates)
+    st.rerun()
