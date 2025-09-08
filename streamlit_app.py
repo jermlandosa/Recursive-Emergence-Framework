@@ -2,7 +2,13 @@ import os
 from typing import List, Dict
 
 import streamlit as st
-from dotenv import load_dotenv
+try:  # pragma: no cover - graceful optional dependency
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # If python-dotenv isn't installed, provide a no-op
+    def load_dotenv(*args, **kwargs):  # type: ignore
+        """Fallback loader when python-dotenv is unavailable."""
+        return False
+
 from openai import OpenAI, OpenAIError
 
 # -----------------------------
