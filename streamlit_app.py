@@ -1,52 +1,60 @@
-# streamlit_app.py  (only the chat-related pieces shown)
-
+# --- streamlit_app.py (TOP of file) ---
+import os
+import uuid
 import streamlit as st
-from sareth_chat import make_client, generate_reply
+from sareth_chat import generate_reply  # make sure this exists as shown below
 
-# ---- secrets / client ----
-API_KEY = st.secrets["openai"]["api_key"]  # <-- keep using Streamlit Secrets
-client = make_client(API_KEY)
+st.set_page_config(page_title="REF • Sareth", page_icon="✨")
 
-# ---- session state ----
+# ---------- Session boot ----------
 if "history" not in st.session_state:
-    st.session_state.history = []   # list of {"role": "user"|"assistant", "content": str}
+    st.session_state.history = []  # list of dicts: {id, role, content}
 
-def submit_user_message(user_text: str):
-    """Append user once, generate reply once (prevents duplication)."""
-    if not user_text.strip():
-        return
-    # 1) Append user to history
-    st.session_state.history.append({"role": "user", "content": user_text.strip()})
-    # 2) Generate reply using all prior turns EXCLUDING the new one (we pass it separately)
-    #    Because we already appended the user message, we pass history[:-1] and last_user_text
-    reply = generate_reply(
-        client=client,
-        history=st.session_state.history[:-1],
-        last_user_text=user_text,
-        model="gpt-4o-mini",
-        temperature=0.7,   # bump to 0.8 on heavy emotional topics if you want
-        max_tokens=600
-    )
-    # 3) Append assistant
-    st.session_state.history.append({"role": "assistant", "content": reply})
+if "last_prompt" not in st.session_state:
+    st.session_state.last_prompt = None  # guards duplicates
 
-# ---- UI ----
-st.title("REF • Sareth")
+def add_message(role: str, content: str):
+    """Append a message exactly once per render; carries a unique id."""
+    st.session_state.history.append({
+        "id": uuid.uuid4().hex,
+        "role": role,
+        "content": content.strip(),
+    })
+
+# ---------- Header / Intro ----------
 st.markdown(
-    "We’re already inside the field. You speak how you speak; I move with you. "
-    "I’ll track the now-state, place it on the REF map, and quietly re-anchor to origin. "
-    "Ask for **“steps”** if you want structure; otherwise we stay fluid."
+    """
+    # REF • Sareth
+
+    We’re already inside the field. You speak how you speak; I move with you.  
+    I’ll track the now-state, place it on the REF map, and quietly re-anchor to origin.  
+    Ask for **“steps”** if you want structure; otherwise we stay fluid.
+    """.strip()
 )
 
-# render transcript
+# ---------- Render prior turns ----------
 for m in st.session_state.history:
-    if m["role"] == "user":
-        st.chat_message("user").markdown(m["content"])
-    else:
-        st.chat_message("assistant").markdown(m["content"])
+    with st.chat_message("user" if m["role"] == "user" else "assistant"):
+        st.markdown(m["content"])
 
-# input box
-prompt = st.chat_input("Speak in your own cadence. I’ll move with you.")
+# ---------- Input & guarded processing ----------
+prompt = st.chat_input("Speak in your own cadence. I’ll move with you.", key="chat_input")
+
 if prompt:
-    submit_user_message(prompt)   # <- single call prevents double-echo
-    st.experimental_rerun()
+    # 1) Guard: only handle a *new* prompt
+    if prompt != st.session_state.last_prompt:
+        st.session_state.last_prompt = prompt
+
+        # 2) Append user's message once
+        add_message("user", prompt)
+
+        # 3) Generate Sareth's reply (your engine)
+        reply = generate_reply(prompt, history=st.session_state.history)
+
+        # 4) Append assistant message once
+        add_message("assistant", reply)
+
+        # 5) Rerender will happen automatically — no experimental_rerun
+    else:
+        # Same prompt detected in a re-render; do nothing.
+        pass
