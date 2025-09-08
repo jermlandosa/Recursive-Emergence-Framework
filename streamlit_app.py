@@ -1,5 +1,5 @@
 # streamlit_app.py
-# REF • Sareth — stable Streamlit shell with duplicate prevention + robust fallbacks
+# REF • Sareth — smooth chat UX (no vanishing first message, no duplicates)
 
 import os
 import uuid
@@ -7,7 +7,7 @@ import inspect
 import streamlit as st
 
 # -----------------------------
-# Page config
+# Page setup
 # -----------------------------
 st.set_page_config(page_title="REF • Sareth", page_icon="✨", layout="centered")
 
@@ -23,138 +23,120 @@ OPENAI_API_KEY = (
 
 if not OPENAI_API_KEY:
     st.error(
-        "❌ Missing OpenAI API key.\n\n"
-        "Add it in **Settings → Secrets** as:\n"
-        "```\n[openai]\napi_key = \"sk-...\"\n```\n"
-        "or set the `OPENAI_API_KEY` environment variable."
+        "❌ Missing OpenAI API key.\n\nAdd it in **Settings → Secrets** as:\n"
+        "```\n[openai]\napi_key = \"sk-...\"\n```"
     )
     st.stop()
 
-# Expose to any module that expects env
+# Expose to modules that expect env
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
+# Preferred model (can override via secrets)
+MODEL_NAME = st.secrets.get("sareth", {}).get("model", "gpt-4o-mini")
+
 # -----------------------------
-# Try to import your orchestrator (sareth_chat.py)
+# Try to import your Sareth engine
 # -----------------------------
-_SARETH_OK = True
-_IMPORT_ERR = None
 _generate_reply = None
-
+_engine_err = None
 try:
-    # You may have different versions of this function across branches.
-    # We will adapt to either signature at call time.
-    from sareth_chat import generate_reply as _generate_reply
+    # You may have one of two signatures; we'll adapt at call time.
+    from sareth_chat import generate_reply as _generate_reply  # noqa
 except Exception as e:
-    _SARETH_OK = False
-    _IMPORT_ERR = e
+    _engine_err = e
 
 # -----------------------------
-# Built-in fallback (depth scaffold) if sareth_chat is missing/broken
+# Built-in fallback (if sareth_chat is missing/broken)
 # -----------------------------
 from openai import OpenAI
 _client = OpenAI(api_key=OPENAI_API_KEY)
 
 FALLBACK_SYSTEM = """
 You are Sareth, a warm, precise, human-first partner inside the Recursive Emergence Framework (REF).
-Keep replies concise and alive (5–10 lines max). No boilerplate, no "as an AI".
-Always cover:
-- Mirror: reflect their felt sense (1–2 lines).
-- Loop lens: name the likely pattern (pattern → trigger → attempted solution/payoff).
-- Origin trace: an earlier belief/need that shapes the loop.
-- Catch in the moment: one tiny, embodied interrupt they can do in vivo.
-- Emergent move: one next coherent move (frame/boundary/request/experiment).
-- Question: one incisive, concrete question.
-
-If they ask for steps, you may enumerate briefly. Otherwise keep flowing prose.
+Keep replies concise and alive (5–10 lines max). No boilerplate, no “as an AI”.
+Always include:
+- Mirror (felt sense in 1–2 lines)
+- Loop lens (pattern → trigger → attempted solution/payoff)
+- Origin trace (earlier belief/need)
+- Catch in the moment (tiny in-vivo interrupt)
+- Emergent move (one coherent next move)
+- Question (one incisive, concrete question)
+If they ask for steps, you may enumerate briefly. Otherwise flow in natural prose.
 """.strip()
 
-def _fallback_generate_reply(user_prompt: str, history: list[dict]) -> str:
-    """Depth scaffold via OpenAI if sareth_chat.generate_reply isn't available."""
+def _fallback_reply(user_prompt: str, history: list[dict]) -> str:
     messages = [{"role": "system", "content": FALLBACK_SYSTEM}]
-    # include trailing context (short tail)
-    tail = history[-8:] if history else []
-    for m in tail:
+    for m in history[-8:]:
         if m["role"] in ("user", "assistant"):
             messages.append({"role": m["role"], "content": m["content"]})
-    # newest user input
-    messages.append({
-        "role": "user",
-        "content": (
-            "Using the depth scaffold (Mirror, Loop lens, Origin trace, Catch in the moment, "
-            "Emergent move, Question), respond naturally to the latest message:\n\n"
-            f"{user_prompt.strip()}"
-        )
-    })
+    messages.append({"role": "user", "content": user_prompt})
     try:
         resp = _client.chat.completions.create(
-            model=st.secrets.get("sareth", {}).get("model", "gpt-4o-mini"),
-            messages=messages,
-            temperature=0.7,
-            max_tokens=600,
+            model=MODEL_NAME, messages=messages, temperature=0.7, max_tokens=600
         )
         return resp.choices[0].message.content.strip()
     except Exception as e:
-        # An extremely safe last resort
         return (
-            "It lands like there’s something real underneath this—not just the situation, "
-            "but how it hits your system right now.\n\n"
-            "I’m sensing a loop of reaching → bracing → reading distance → protecting. "
-            "Often that begins with an old contract like “if I show the messy parts, I’ll lose the bond.”\n\n"
-            "Catch it in the moment: pause the story, soften your jaw, lengthen the out-breath, and name one true line: "
-            "“I want to be close and I’m nervous.”\n\n"
-            "From there, a smaller, truer move usually appears. What’s the tiniest honest move you could try today?"
-            f"\n\n_(Fallback active: {type(e).__name__}: {e})_"
+            "It lands like there’s something real under this—not just the situation, "
+            "but how it hits your system. I’m sensing a loop of reaching → bracing → "
+            "reading distance → protecting. Catch it live: pause, soften the jaw, long exhale, "
+            "say one true line (e.g., “I want to be close and I’m nervous.”). From there, a smaller, "
+            f"truer move usually appears. What’s the simplest honest move you could try today?\n\n_(fallback: {e})_"
         )
 
-# Wrapper that calls your `sareth_chat.generate_reply` if available, otherwise uses fallback.
-def call_sareth_generate_reply(user_prompt: str, history: list[dict]) -> str:
+def get_reply(user_text: str, history: list[dict]) -> str:
+    """Call your sareth_chat.generate_reply if available; otherwise use fallback.
+       Supports either signature:
+         1) generate_reply(user_prompt, history)
+         2) generate_reply(client=..., history=..., last_user_text=..., ...)
+    """
     if _generate_reply is None:
-        return _fallback_generate_reply(user_prompt, history)
+        return _fallback_reply(user_text, history)
 
-    # Detect which signature your `generate_reply` exposes and adapt
     try:
         sig = inspect.signature(_generate_reply)
-        params = sig.parameters
-        if {"user_prompt", "history"} <= set(params.keys()):
-            # Newer/simple signature: generate_reply(user_prompt, history)
-            return _generate_reply(user_prompt=user_prompt, history=history)
-        elif {"client", "history", "last_user_text"} <= set(params.keys()):
-            # Older signature: generate_reply(client=..., history=..., last_user_text=..., ...)
+        params = set(sig.parameters.keys())
+        # New/simple: (user_prompt, history)
+        if {"user_prompt", "history"} <= params:
+            return _generate_reply(user_prompt=user_text, history=history)
+        # Older: (client, history, last_user_text, ...)
+        if {"client", "history", "last_user_text"} <= params:
             return _generate_reply(
                 client=_client,
                 history=history,
-                last_user_text=user_prompt,
-                model=st.secrets.get("sareth", {}).get("model", "gpt-4o-mini"),
+                last_user_text=user_text,
+                model=MODEL_NAME,
                 temperature=0.7,
                 max_tokens=600,
             )
-        else:
-            # Unknown signature — attempt positional with best guess
-            try:
-                return _generate_reply(user_prompt, history)
-            except TypeError:
-                return _fallback_generate_reply(user_prompt, history)
+        # Try positional best-guess
+        try:
+            return _generate_reply(user_text, history)
+        except TypeError:
+            return _fallback_reply(user_text, history)
     except Exception:
-        return _fallback_generate_reply(user_prompt, history)
+        return _fallback_reply(user_text, history)
 
 # -----------------------------
-# Session state
+# Session state (single source of truth)
 # -----------------------------
 if "history" not in st.session_state:
-    # Each entry: {"id": str, "role": "user"|"assistant", "content": str}
+    # Each message: {"id": str, "role": "user"|"assistant", "content": str}
     st.session_state.history = []
-if "last_prompt" not in st.session_state:
-    st.session_state.last_prompt = None  # guards accidental double-handling
+
+if "handled_submissions" not in st.session_state:
+    # Tracks processed (turn_index::text) to prevent double-processing on rerender
+    st.session_state.handled_submissions = set()
 
 def add_message(role: str, content: str):
     st.session_state.history.append({
         "id": uuid.uuid4().hex,
         "role": role,
-        "content": content.strip(),
+        "content": (content or "").strip(),
     })
 
 # -----------------------------
-# Header / Intro
+# Header / intro
 # -----------------------------
 st.markdown(
     """
@@ -167,37 +149,38 @@ Ask for **“steps”** if you want structure; otherwise we stay fluid.
 )
 
 with st.sidebar:
-    st.caption("Keys loaded from Secrets ✅" if OPENAI_API_KEY else "Keys missing ❌")
-    if not _SARETH_OK:
-        st.warning("Using fallback depth scaffold (couldn’t import `sareth_chat.generate_reply`).")
-        if _IMPORT_ERR:
-            st.caption(f"{type(_IMPORT_ERR).__name__}: {str(_IMPORT_ERR)}")
+    st.caption("OpenAI key: ✅ loaded from Secrets")
+    if _engine_err:
+        st.warning("Using fallback depth scaffold — `sareth_chat.generate_reply` not loaded.")
+        st.caption(f"{type(_engine_err).__name__}: {str(_engine_err)}")
 
 # -----------------------------
-# Render prior turns (single source of truth)
+# INPUT FIRST → process once → rerun → RENDER
 # -----------------------------
-for m in st.session_state.history:
-    with st.chat_message("user" if m["role"] == "user" else "assistant"):
-        st.markdown(m["content"])
+user_text = st.chat_input("Speak in your own cadence. I’ll move with you.", key="chat_box")
 
-# -----------------------------
-# Input & single-shot handling
-# -----------------------------
-prompt = st.chat_input("Speak in your own cadence. I’ll move with you.")
-if prompt:
-    # Guard against duplicate handling on rerender
-    if prompt != st.session_state.last_prompt:
-        st.session_state.last_prompt = prompt
+if user_text:
+    # Unique key for this exact submission at this point in the transcript
+    submission_key = f"{len(st.session_state.history)}::{user_text.strip()}"
+    if submission_key not in st.session_state.handled_submissions:
+        st.session_state.handled_submissions.add(submission_key)
 
         # Append user once
-        add_message("user", prompt)
+        add_message("user", user_text)
 
-        # Generate assistant reply (robust to module/version differences)
-        reply = call_sareth_generate_reply(prompt, history=st.session_state.history)
+        # Generate reply (robust to engine variations)
+        reply = get_reply(user_text, history=st.session_state.history)
 
         # Append assistant once
         add_message("assistant", reply)
 
-        # No experimental_rerun needed — Streamlit will re-render automatically
+        # Clear input and rerun so both bubbles appear immediately
+        st.session_state["chat_box"] = ""
+        st.rerun()
 
-# Done
+# -----------------------------
+# Render transcript (exactly once)
+# -----------------------------
+for m in st.session_state.history:
+    with st.chat_message("user" if m["role"] == "user" else "assistant"):
+        st.markdown(m["content"])
