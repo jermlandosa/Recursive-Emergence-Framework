@@ -1,152 +1,115 @@
-# streamlit_app.py
 import os
-import time
-import hashlib
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 import streamlit as st
+from dotenv import load_dotenv
+from openai import OpenAI, OpenAIError
 
-# ----------------------------
-# Try to use your REF brain first
-# ----------------------------
-generate_reply_fn = None
-try:
-    from sareth_chat import generate_reply as _ref_generate_reply  # your custom brain
-    generate_reply_fn = _ref_generate_reply
-except Exception:
-    pass
+# -----------------------------
+# Bootstrapping / Secrets
+# -----------------------------
+load_dotenv(override=True)
 
-# ----------------------------
-# Fallback to OpenAI if REF brain isn't available
-# ----------------------------
-def _openai_generate_reply(prompt: str, history: List[Dict[str, str]]) -> str:
-    import openai
-    # Streamlit → share.secrets: [openai] api_key="..."
-    api_key = st.secrets.get("openai", {}).get("api_key") or os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        return (
-            "⚠️ Missing OpenAI API key. Add it in Streamlit Secrets `[openai] api_key = \"...\"` "
-            "or set `OPENAI_API_KEY`."
-        )
+# Get API key from Streamlit Secrets or env
+OPENAI_API_KEY = (
+    st.secrets.get("openai", {}).get("api_key")
+    if hasattr(st, "secrets") else None
+) or os.getenv("OPENAI_API_KEY")
 
-    openai.api_key = api_key
-
-    # Compose chat history for the fallback model
-    messages = [{"role": "system",
-                 "content": ("You are Sareth — the interface of the Recursive Emergence Framework. "
-                             "Mirror → Loop Lens → Origin Trace → Catch → Emergent Move → Question. "
-                             "Be concise, coherent, and human. No therapy claims.")}]
-    for m in history:
-        messages.append({"role": m["role"], "content": m["content"]})
-    messages.append({"role": "user", "content": prompt})
-
-    # You can swap to your preferred model here
-    resp = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=messages,
-        temperature=0.6,
-        max_tokens=600,
+if not OPENAI_API_KEY:
+    st.error(
+        "Missing OpenAI API key. Add it in Streamlit Cloud (Settings → Secrets) "
+        "as `[openai]\napi_key=\"...\"` or set environment variable `OPENAI_API_KEY`."
     )
-    return resp.choices[0].message["content"].strip()
+    st.stop()
 
-def generate_reply(prompt: str, history: List[Dict[str, str]]) -> str:
-    if generate_reply_fn:
-        return generate_reply_fn(prompt, history=history)
-    return _openai_generate_reply(prompt, history)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-# ----------------------------
-# Helpers
-# ----------------------------
-def _hash_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+# -----------------------------
+# UI – Title & Intro
+# -----------------------------
+st.set_page_config(page_title="REF • Sareth", page_icon="🧭", layout="centered")
 
-def add_message(role: str, content: str):
-    st.session_state.history.append({"role": role, "content": content})
-
-# ----------------------------
-# Page config & style
-# ----------------------------
-st.set_page_config(page_title="REF • Sareth", page_icon="🌀", layout="centered")
-
-st.markdown(
-    """
-    <style>
-      /* keep input visible, reduce layout jump */
-      .stChatInput { position: sticky; bottom: 0; z-index: 2; }
-      .block-container { padding-top: 1.5rem; padding-bottom: 6.5rem; }
-      .bubble-user { background: #17212b; padding: 0.9rem 1rem; border-radius: 12px; }
-      .bubble-assistant { background: #0f1720; padding: 0.9rem 1rem; border-radius: 12px; }
-      .meta { opacity: 0.8; font-size: 0.94rem; }
-      .lead { font-size: 1.05rem; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ----------------------------
-# Session state (single source of truth)
-# ----------------------------
-if "history" not in st.session_state:
-    st.session_state.history: List[Dict[str, str]] = []
-
-if "last_processed_hash" not in st.session_state:
-    st.session_state.last_processed_hash: Optional[str] = None
-
-# Staging area for inputs we haven't processed yet
-if "pending_input" not in st.session_state:
-    st.session_state.pending_input: Optional[str] = None
-
-# ----------------------------
-# Header / intro
-# ----------------------------
-st.markdown("# REF • Sareth")
+st.title("REF • Sareth")
 st.write(
     "We’re already inside the field. You speak how you speak; I move with you. "
     "I’ll track the now-state, place it on the REF map, and quietly re-anchor to origin. "
     "Ask for **“steps”** if you want structure; otherwise we stay fluid."
 )
 
-# ----------------------------
-# Show history so far
-# ----------------------------
-for m in st.session_state.history:
-    with st.chat_message(m["role"]):
+# -----------------------------
+# Session State
+# -----------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages: List[Dict[str, str]] = []
+
+# -----------------------------
+# REF prompt helper
+# -----------------------------
+REF_STYLE_SYSTEM = (
+    "You are Sareth, an interface to the Recursive Emergence Framework (REF). "
+    "Your replies should be concise, warm, and human. Move with the user’s cadence. "
+    "When useful, reflect via the REF lens:\n"
+    "• Mirror — reflect their now-state in plain language.\n"
+    "• Loop lens — lightly name a possible pattern (loop) without pathologizing.\n"
+    "• Origin trace — point at an earlier belief/need that could shape the loop.\n"
+    "• Catch in the moment — one tiny somatic/awareness action the user can try now.\n"
+    "• Emergent move — the smallest next move that could open space.\n"
+    "• Question — one precise question that invites the next turn.\n\n"
+    "Avoid being generic or purely transactional. Prefer resonance over advice. "
+    "Only add all six sections when they serve; otherwise keep it fluid. "
+    "If the user asks for 'steps', offer a short numbered path. "
+)
+
+def _build_messages(history: List[Dict[str, str]], user_text: str) -> List[Dict[str, str]]:
+    msgs = [{"role": "system", "content": REF_STYLE_SYSTEM}]
+    for m in history:
+        msgs.append({"role": m["role"], "content": m["content"]})
+    msgs.append({"role": "user", "content": user_text})
+    return msgs
+
+def generate_reply(user_text: str, history: List[Dict[str, str]]) -> str:
+    """OpenAI v1 chat call with robust error handling."""
+    try:
+        resp = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=_build_messages(history, user_text),
+            temperature=0.6,
+            max_tokens=700,
+        )
+        return resp.choices[0].message.content.strip()
+    except OpenAIError as e:
+        return (
+            "I hit an API error while generating a response. "
+            f"If this keeps happening, check the API key/limits. Details: {e}"
+        )
+
+# -----------------------------
+# Render chat history
+# -----------------------------
+for m in st.session_state.messages:
+    with st.chat_message("user" if m["role"] == "user" else "assistant"):
         st.markdown(m["content"])
 
-# ----------------------------
-# Chat input (do NOT mutate its key after render)
-# ----------------------------
-user_input = st.chat_input("Speak in your own cadence. I’ll move with you.", key="chat_box")
+# -----------------------------
+# Single, smooth input (no double submit)
+# -----------------------------
+user_input = st.chat_input("Speak in your own cadence. I’ll move with you…")
 
-# Stage the input ONCE. We don’t process it inline to avoid double-runs.
-if user_input and not st.session_state.pending_input:
-    st.session_state.pending_input = user_input
+if user_input:
+    # Show the user's message immediately
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
 
-# ----------------------------
-# Process pending input exactly once
-# ----------------------------
-if st.session_state.pending_input:
-    pending = st.session_state.pending_input.strip()
-    if pending:
-        h = _hash_text(pending)
-        if h != st.session_state.last_processed_hash:
-            # 1) append user bubble
-            add_message("user", pending)
+    # Generate and show assistant reply (no rerun; rely on Streamlit's chat_input clear)
+    reply = generate_reply(user_input, st.session_state.messages[:-1])
 
-            # 2) generate assistant reply (using full history including the new user message)
-            reply = generate_reply(pending, history=st.session_state.history)
-            add_message("assistant", reply)
+    st.session_state.messages.append({"role": "assistant", "content": reply})
+    with st.chat_message("assistant"):
+        st.markdown(reply)
 
-            # 3) mark processed & clear staging
-            st.session_state.last_processed_hash = h
-
-        # Always clear pending after attempt (prevents repeats across re-runs)
-        st.session_state.pending_input = None
-
-    # Trigger a soft rerun so both bubbles show up immediately without touching chat_box
-    st.rerun()
-
-# ----------------------------
-# Footer hint
-# ----------------------------
+# -----------------------------
+# Footer
+# -----------------------------
 st.caption("Move from coherence, not force. Ask for **steps** anytime.")
