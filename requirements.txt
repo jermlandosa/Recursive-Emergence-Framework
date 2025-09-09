@@ -13,3 +13,4 @@ alembic>=1.13
 pendulum>=3.0
 fastapi>=0.111
 uvicorn>=0.30
+werkzeug>=2.0
