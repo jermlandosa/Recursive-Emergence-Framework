@@ -10,9 +10,11 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     create_engine,
 )
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from .config import get_db_url
 
@@ -20,11 +22,28 @@ from .config import get_db_url
 Base = declarative_base()
 
 
-class Claim(Base):
-    __tablename__ = "claims"
+class User(Base):
+    __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    claim_id = Column(String(32), unique=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    def set_password(self, pw: str):
+        self.password_hash = generate_password_hash(pw)
+
+    def check_password(self, pw: str) -> bool:
+        return check_password_hash(self.password_hash, pw)
+
+
+class Claim(Base):
+    __tablename__ = "claims"
+    __table_args__ = (UniqueConstraint("user_id", "claim_id"),)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    claim_id = Column(String(32), index=True)
     text = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     volatility = Column(String(16), default="stable", index=True)
@@ -33,6 +52,7 @@ class Claim(Base):
     drift_score = Column(Float, default=0.0, index=True)
     confidence_index = Column(Float, default=0.0, index=True)
     meta = Column(Text, default="{}")
+    user = relationship("User")
     histories = relationship(
         "DriftHistory", back_populates="claim", cascade="all, delete-orphan"
     )
@@ -48,16 +68,19 @@ class DriftHistory(Base):
     __tablename__ = "drift_history"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     claim_id_fk = Column(Integer, ForeignKey("claims.id"), index=True)
     t = Column(DateTime, default=datetime.utcnow, index=True)
     drift = Column(Float, nullable=False)
     claim = relationship("Claim", back_populates="histories")
+    user = relationship("User")
 
 
 class Artifact(Base):
     __tablename__ = "artifacts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     claim_id_fk = Column(Integer, ForeignKey("claims.id"), index=True)
     kind = Column(String(32))
     path_or_url = Column(Text, nullable=False)
@@ -67,6 +90,7 @@ class Artifact(Base):
     has_chain = Column(Boolean, default=False)
     is_reproducible = Column(Boolean, default=False)
     claim = relationship("Claim", back_populates="artifacts")
+    user = relationship("User")
 
 
 def get_engine():
@@ -79,13 +103,24 @@ def get_session():
     return sessionmaker(bind=engine, future=True)()
 
 
-def next_claim_human_id(sess) -> str:
-    count = sess.query(Claim).count() + 1
+def get_or_create_user(sess, email: str, password: str) -> User:
+    u = sess.query(User).filter_by(email=email).one_or_none()
+    if not u:
+        u = User(email=email)
+        u.set_password(password)
+        sess.add(u)
+        sess.commit()
+    return u
+
+
+def next_claim_human_id(sess, user_id: int) -> str:
+    count = sess.query(Claim).filter(Claim.user_id == user_id).count() + 1
     return f"CLM-{count:04d}"
 
 
 def add_claim(
     sess,
+    user: User,
     text: str,
     volatility: str = "stable",
     prov_fields: int = 0,
@@ -100,7 +135,8 @@ def add_claim(
         min(1.0, (0.6 * pc + 0.4 * (ind / 3.0)) * (1.0 - (drift / 10.0))),
     )
     claim = Claim(
-        claim_id=next_claim_human_id(sess),
+        user_id=user.id,
+        claim_id=next_claim_human_id(sess, user.id),
         text=text,
         volatility=volatility,
         provenance_completeness=pc,
@@ -111,14 +147,15 @@ def add_claim(
     )
     sess.add(claim)
     sess.flush()
-    sess.add(DriftHistory(claim_id_fk=claim.id, drift=drift))
+    sess.add(DriftHistory(user_id=user.id, claim_id_fk=claim.id, drift=drift))
     sess.commit()
     return claim
 
 
-def append_drift(sess, claim: Claim, drift_value: float):
+def append_drift(sess, user: User, claim: Claim, drift_value: float):
+    assert claim.user_id == user.id, "Unauthorized"
     claim.drift_score = float(drift_value)
-    sess.add(DriftHistory(claim_id_fk=claim.id, drift=float(drift_value)))
+    sess.add(DriftHistory(user_id=user.id, claim_id_fk=claim.id, drift=float(drift_value)))
     sess.commit()
     return claim
 
