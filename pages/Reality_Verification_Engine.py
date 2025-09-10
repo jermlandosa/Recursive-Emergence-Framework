@@ -1,20 +1,54 @@
+import os
 import streamlit as st
 import matplotlib.pyplot as plt
 
-from rve.ledger import get_session, add_claim, append_drift, Claim, User
+from rve.ledger import (
+    get_session,
+    add_claim,
+    append_drift,
+    Claim,
+    User,
+    get_or_create_user,
+)
 from rve.auth import auth_gate, get_current_user
 
 st.set_page_config(page_title="Reality Verification Engine", layout="wide")
 
+st.markdown(
+    """
+<style>
+@media (max-width: 640px){
+  [data-testid="stSidebar"] { display: none; }
+  [data-testid="stHeader"] { height: 3rem; }
+  .block-container { padding-top: 1rem; }
+}
+@media (min-width: 641px) and (max-width: 1024px){
+  [data-testid="stSidebar"] { width: 260px; }
+}
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
+AUTH_DISABLED = os.getenv("AUTH_DISABLED", "true").lower() in ("1", "true", "yes")
+
 sess = get_session()
+if AUTH_DISABLED and "user_id" not in st.session_state:
+    guest = get_or_create_user(sess, "guest@sareth.app", "guest")
+    st.session_state["user_id"] = guest.id
+    st.session_state["user_email"] = guest.email
+
 user = get_current_user(sess)
-if not user:
+if not user and not AUTH_DISABLED:
     auth_gate()
+    st.stop()
+elif not user:
+    st.error("Guest account unavailable.")
     st.stop()
 
 st.markdown("# Reality Verification Engine")
 st.caption(
-    "Check if a claim stays aligned with reality. See how much the story changed, how strong the evidence is, and how confident you can be."
+    "Check if a claim stays aligned with reality. See how much the story changed, how strong the evidence is, and how confident you can be.",
 )
 
 LABELS = {
