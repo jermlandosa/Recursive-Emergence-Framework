@@ -2,8 +2,10 @@ import os
 import streamlit as st
 from rve.ledger import get_session, get_or_create_user
 
-st.set_page_config(page_title="Sareth • RVE", page_icon="✨", layout="wide")
+# Configure the main entry page for the Recursive Emergence Framework (REF)
+st.set_page_config(page_title="Sareth • REF", page_icon="✨", layout="wide")
 
+# When authentication is disabled, ensure there is a default guest user in session state
 AUTH_DISABLED = os.getenv("AUTH_DISABLED", "true").lower() in ("1", "true", "yes")
 if AUTH_DISABLED and "user_id" not in st.session_state:
     sess = get_session()
@@ -15,29 +17,36 @@ if AUTH_DISABLED and "user_id" not in st.session_state:
     st.session_state["username"] = "guest"
     st.session_state["auth_ok"] = True
 
+# Inject responsive CSS and hide the sidebar navigation on the root page
 st.markdown(
     """
-<style>
-@media (max-width: 640px){
-  [data-testid="stSidebar"] { display: none; }
-  [data-testid="stHeader"] { height: 3rem; }
-  .block-container { padding-top: 1rem; }
-}
-@media (min-width: 641px) and (max-width: 1024px){
-  [data-testid="stSidebar"] { width: 260px; }
-}
-</style>
-""",
+    <style>
+    @media (max-width: 640px){
+      [data-testid="stSidebar"] { display: none; }
+      [data-testid="stHeader"] { height: 3rem; }
+      .block-container { padding-top: 1rem; }
+    }
+    @media (min-width: 641px) and (max-width: 1024px){
+      [data-testid="stSidebar"] { width: 260px; }
+    }
+    /* Hide the sidebar navigation items so only the target page appears */
+    [data-testid="stSidebarNav"] ul {
+      display: none;
+    }
+    </style>
+    """,
     unsafe_allow_html=True,
 )
 
 try:
-    st.switch_page("pages/Reality_Verification_Engine.py")
+    # Redirect immediately to the REF page in the pages directory
+    st.switch_page("pages/Recursive_Emergence_Framework.py")
 except Exception:
-    st.markdown("### Redirecting to Reality Verification Engine…")
-    st.experimental_set_query_params(page="Reality_Verification_Engine")
+    # Fallback link if automatic redirection fails
+    st.markdown("### Redirecting to Recursive Emergence Framework…")
+    st.experimental_set_query_params(page="Recursive_Emergence_Framework")
     st.page_link(
-        "pages/Reality_Verification_Engine.py",
+        "pages/Recursive_Emergence_Framework.py",
         label="Click here if not redirected",
         icon="✨",
     )
