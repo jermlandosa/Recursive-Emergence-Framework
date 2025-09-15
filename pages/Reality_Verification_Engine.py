@@ -12,21 +12,23 @@ from rve.ledger import (
 )
 from rve.auth import auth_gate, get_current_user
 
-st.set_page_config(page_title="Reality Verification Engine", layout="wide")
+# Set page configuration with REF indicator
+st.set_page_config(page_title="Reality Verification Engine (REF)", layout="wide")
 
+# Inject custom CSS for responsive layout
 st.markdown(
     """
-<style>
-@media (max-width: 640px){
-  [data-testid="stSidebar"] { display: none; }
-  [data-testid="stHeader"] { height: 3rem; }
-  .block-container { padding-top: 1rem; }
-}
-@media (min-width: 641px) and (max-width: 1024px){
-  [data-testid="stSidebar"] { width: 260px; }
-}
-</style>
-""",
+    
+    @media (max-width: 640px){
+      [data-testid="stSidebar"] { display: none; }
+      [data-testid="stHeader"] { height: 3rem; }
+      .block-container { padding-top: 1rem; }
+    }
+    @media (min-width: 641px) and (max-width: 1024px){
+      [data-testid="stSidebar"] { width: 260px; }
+    }
+    
+    """,
     unsafe_allow_html=True,
 )
 
@@ -46,11 +48,23 @@ elif not user:
     st.error("Guest account unavailable.")
     st.stop()
 
-st.markdown("# Reality Verification Engine")
+# ------------------------------------------------------
+# REF-themed header and introduction
+st.markdown("# Reality Verification Engine (REF)")
 st.caption(
-    "Check if a claim stays aligned with reality. See how much the story changed, how strong the evidence is, and how confident you can be.",
+    "Powered by the Recursive Emergence Framework (REF), this engine checks if a claim stays aligned with reality by evaluating identity coherence, memory recall, feedback loops, and symbolic anchors.",
+)
+st.markdown(
+    """
+    **REF Pillars**:
+    - **Identity**: maintain a consistent persona across interactions.
+    - **Memory**: leverage long-term memory of past sessions.
+    - **Feedback**: use self-critique to refine responses.
+    - **Anchors**: enforce symbolic and ethical anchors for coherence.
+    """,
 )
 
+# Original labels and tooltips
 LABELS = {
     "drift": "Story change",
     "provenance": "Evidence strength",
