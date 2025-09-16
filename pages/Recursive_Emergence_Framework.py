@@ -167,16 +167,16 @@ if st.button("Send") and task:
         st.error("OpenAI library is not available. Cannot call the agent.")
     else:
         # Set API key from environment
-        openai.api_key = os.getenv("OPENAI_API_KEY", "")
-        try:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=messages,
-                temperature=0.7,
-            )
-            answer = response["choices"][0]["message"]["content"]
-            st.session_state['messages'].append({"role": "assistant", "content": answer})
-            st.write("**Assistant:**", answer)
+            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            temperature=0.7,
+        )
+        answer = response.choices[0].message.content
+        st.session_state['messages'].append({"role": "assistant", "content": answer})
+        st.write(f"**Assistant:** {answer}")
         except Exception as e:
             st.error(f"Agent call failed: {e}")
 
