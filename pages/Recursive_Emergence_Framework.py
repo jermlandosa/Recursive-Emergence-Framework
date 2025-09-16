@@ -38,18 +38,18 @@ st.caption("A cognitive‑symbolic architecture for reflexive LLM agents.")
 st.markdown(
     """
     ## Overview
-    
-    The **Recursive Emergence Framework** (REF) couples a persistent identity and long‑term memory with explicit self‑critique and symbolic anchoring.  
-    
+
+    The **Recursive Emergence Framework** (REF) couples a persistent identity and long‑term memory with explicit self‑critique and symbolic anchoring.
+
     Four key components drive REF:
-    
+
     - **Identity** – a consistent persona across turns, including traits, roles, style, and moral guidelines.
     - **Memory** – episodic and semantic memory built up from past interactions.
     - **Feedback** – a critic module that scores and comments on drafts, helping the agent refine its responses.
-    - **Anchors** – symbolic and ethical rules (contradiction checks, variable consistency, etc.) that enforce coherence.
-    
-    These elements interact in a **closed loop** that runs at every conversational step.  Without retraining the model’s weights, REF produces adaptive, self‑modifying behaviour by iterating through this loop.
-    """
+    - **Anchors** – symbolic and ethical rules (no‑contradiction, var‑consistency, no‑harm, privacy) that enforce coherence.
+
+    These elements interact in a **closed loop** that runs at every conversational step. Without retraining the model’s weights, REF produces adaptive, self‑modifying behaviour by iterating through this loop.
+    """,
 )
 
 # Pseudocode for the REF loop
@@ -136,6 +136,7 @@ st.markdown("## Talk to the REF agent")
 if 'messages' not in st.session_state:
     st.session_state['messages'] = []
 
+# Input box for user question
 task = st.text_input("Ask the REF agent a question:", "")
 
 if st.button("Send") and task:
@@ -167,23 +168,22 @@ if st.button("Send") and task:
         st.error("OpenAI library is not available. Cannot call the agent.")
     else:
         # Set API key from environment
-            client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4",
-            messages=messages,
-            temperature=0.7,
-        )
-        answer = response.choices[0].message.content
-        st.session_state['messages'].append({"role": "assistant", "content": answer})
-        st.write(f"**Assistant:** {answer}")
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4",
+                messages=messages,
+                temperature=0.7,
+            )
+            answer = response.choices[0].message.content
+            st.session_state['messages'].append({"role": "assistant", "content": answer})
+            st.write(f"**Assistant:** {answer}")
         except Exception as e:
             st.error(f"Agent call failed: {e}")
 
 # Footer
 st.markdown(
     """
-    ---
-    **Note:** This page implements a basic REF agent using the OpenAI API. Make sure you have set your `OPENAI_API_KEY` in the environment for it to work.
+    ***Note:*** This page implements a basic REF agent using the OpenAI API. Make sure you have set your 'OPENAI_API_KEY' in the environment for it to work.
     """
 )
