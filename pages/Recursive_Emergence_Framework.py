@@ -1,189 +1,75 @@
-import os
 import streamlit as st
-import json
+from rve.live import ensure_chat_state, stream_chat, messages_for_llm, push_user, push_assistant
+from rve.glyphs import map_text_to_glyph_events
 
-try:
-    import openai  # type: ignore
-except ImportError:
-    openai = None  # Avoid breaking local dev if openai is unavailable
+st.set_page_config(page_title="Recursive Emergence Framework", page_icon="🧭", layout="wide")
+ensure_chat_state()
 
-# Configure the page
-st.set_page_config(
-    page_title="Recursive Emergence Framework (REF)",
-    layout="wide",
-)
+# ---- Header ----
+colA, colB, colC = st.columns([5, 2, 1])
+with colA:
+    st.title("Recursive Emergence Framework (Live) 🧭")
+    st.caption("Streaming responses + real-time glyph mapping (Sareth mode)")
+with colB:
+    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"], index=0)
+with colC:
+    if st.button("↺ Reset"):
+        st.session_state.chat.clear()
+        st.session_state.glyph_trace.clear()
+        st.session_state.last_response = ""
+        st.experimental_rerun()
 
-# Optionally hide the default Streamlit header in the sidebar
-st.markdown(
-    """
-    <style>
-    /* Hide the Streamlit app branding in the sidebar */
-    [data-testid="stSidebar"] > div:nth-child(1) {
-        display: none;
-    }
-    /* Hide the default sidebar navigation so only this page is visible */
-    [data-testid="stSidebarNav"] ul {
-        display: none;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+with st.expander("System (Sareth)"):
+    sys_new = st.text_area("System Prompt", value=st.session_state.system_prompt, height=140)
+    if sys_new != st.session_state.system_prompt:
+        st.session_state.system_prompt = sys_new
+        st.success("System updated for the next turns.")
 
-# Title and introduction
-st.markdown("# Recursive Emergence Framework (REF)")
-st.caption("A cognitive‑symbolic architecture for reflexive LLM agents.")
+# ---- Layout ----
+left, right = st.columns([3, 2], vertical_alignment="top")
 
-# Overview section
-st.markdown(
-    """
-    ## Overview
+with left:
+    # History
+    for msg in st.session_state.chat:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
-    The **Recursive Emergence Framework** (REF) couples a persistent identity and long‑term memory with explicit self‑critique and symbolic anchoring.
+    # Input
+    user_input = st.chat_input("Speak to Sareth…")
+    if user_input:
+        with st.chat_message("user"):
+            st.markdown(user_input)
+        push_user(user_input)
 
-    Four key components drive REF:
+        # Streamed assistant
+        with st.chat_message("assistant"):
+            slot = st.empty()
+            full_text = ""
+            for delta in stream_chat(messages_for_llm(), model=model, temperature=0.2):
+                full_text += delta
+                # live typing cursor
+                slot.markdown(full_text + "▌")
 
-    - **Identity** – a consistent persona across turns, including traits, roles, style, and moral guidelines.
-    - **Memory** – episodic and semantic memory built up from past interactions.
-    - **Feedback** – a critic module that scores and comments on drafts, helping the agent refine its responses.
-    - **Anchors** – symbolic and ethical rules (no‑contradiction, var‑consistency, no‑harm, privacy) that enforce coherence.
+                # Live glyph mapping per chunk
+                evs = map_text_to_glyph_events(delta)
+                if evs:
+                    st.session_state.glyph_trace.extend(evs)
 
-    These elements interact in a **closed loop** that runs at every conversational step. Without retraining the model’s weights, REF produces adaptive, self‑modifying behaviour by iterating through this loop.
-    """,
-)
+            # finalize
+            slot.markdown(full_text)
+            push_assistant(full_text)
+            st.session_state.last_response = full_text
 
-# Pseudocode for the REF loop
-st.markdown("## REF Loop (pseudocode)")
-st.code(
-    """
-state = {identity, anchors, memory}
-while turn:
-    # Retrieve past context and build prompt
-    ctx = retrieve(memory, user_query) + identity + anchors
-    # Generate a draft using the underlying LLM
-    draft = LLM(ctx, user_query)
-    # Let the critic evaluate the draft against anchors and goals
-    feedback = Critic(draft, anchors, goals)
-    # Update memory with the turn and feedback
-    memory = update(memory, summarize(turn, feedback))
-    # Reconcile anchors if contradictions are found
-    anchors = reconcile(anchors, contradictions(draft, memory))
-    # Revise the draft based on feedback and anchors
-    final = revise(draft, feedback, anchors)
-    return final
-    """,
-    language="python",
-)
-
-# Data contract examples
-st.markdown("## Data Contracts")
-with st.expander("Identity schema"):
-    st.code(
-        json.dumps(
-            {
-                "traits": ["patient", "truth‑seeking"],
-                "roles": ["research_assistant"],
-                "style": {"tone": "concise"},
-            },
-            indent=2,
-        ),
-        language="json",
-    )
-with st.expander("Memory schema"):
-    st.code(
-        json.dumps(
-            {
-                "episodes": [
-                    {"t": "2025-09-15", "q": "...", "a": "...", "outcome": "success"}
-                ],
-                "summaries": [
-                    {"t": "2025-09-15", "insight": "prefers diagrams"}
-                ],
-            },
-            indent=2,
-        ),
-        language="json",
-    )
-with st.expander("Anchors schema"):
-    st.code(
-        json.dumps(
-            {
-                "logic": ["no-contradiction", "var-consistency"],
-                "ethics": ["no-harm", "privacy"],
-                "session_facts": ["X implies Y"],
-                "jargon": {"REF": "Recursive Emergence Framework"},
-            },
-            indent=2,
-        ),
-        language="json",
-    )
-with st.expander("Feedback record schema"):
-    st.code(
-        json.dumps(
-            {
-                "scores": {"correctness": 0.7, "coherence": 0.9},
-                "notes": ["tone drifted from 'patient'"],
-                "actions": ["reinforce_trait:patient", "add_anchor:term('REF')"],
-            },
-            indent=2,
-        ),
-        language="json",
-    )
-
-# Live agent interaction
-st.markdown("## Talk to the REF agent")
-
-if 'messages' not in st.session_state:
-    st.session_state['messages'] = []
-
-# Input box for user question
-task = st.text_input("Ask the REF agent a question:", "")
-
-if st.button("Send") and task:
-    # Append user message to session state
-    st.session_state['messages'].append({"role": "user", "content": task})
-
-    # Define identity for the system prompt
-    identity = {
-        "traits": ["patient", "truth‑seeking"],
-        "roles": ["research_assistant"],
-        "style": {"tone": "concise"},
-    }
-    system_prompt = (
-        "You are a Recursive Emergence Framework (REF) agent. "
-        "Your identity traits are {traits}, and your roles are {roles}. "
-        "Respond truthfully, concisely, and maintain coherence across turns. "
-        "If contradictions arise, resolve them based on your anchors: no-contradiction, var-consistency, no-harm, privacy. "
-        "Use your memory to recall previous turns."
-    ).format(traits=", ".join(identity["traits"]), roles=", ".join(identity["roles"]))
-
-    messages = []
-    # Append system message only once, at the beginning
-    if not any(m["role"] == "system" for m in st.session_state['messages']):
-        messages.append({"role": "system", "content": system_prompt})
-    # Add past messages
-    messages += st.session_state['messages']
-
-    if openai is None:
-        st.error("OpenAI library is not available. Cannot call the agent.")
+with right:
+    st.subheader("Glyph Trace (live)")
+    if not st.session_state.glyph_trace:
+        st.info("As responses stream, detected glyph signals will appear here.")
     else:
-        # Set API key from environment
-        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
-        try:
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=messages,
-                temperature=0.7,
+        for ev in reversed(st.session_state.glyph_trace[-24:]):
+            st.markdown(
+                f"**{ev['glyph']}** — _{ev['signal']}_ · <span style='opacity:.6'>{ev['t']}</span>",
+                unsafe_allow_html=True,
             )
-            answer = response.choices[0].message.content
-            st.session_state['messages'].append({"role": "assistant", "content": answer})
-            st.write(f"**Assistant:** {answer}")
-        except Exception as e:
-            st.error(f"Agent call failed: {e}")
 
-# Footer
-st.markdown(
-    """
-    ***Note:*** This page implements a basic REF agent using the OpenAI API. Make sure you have set your 'OPENAI_API_KEY' in the environment for it to work.
-    """
-)
+    with st.expander("Last response (raw)"):
+        st.code(st.session_state.last_response or "", language="markdown")

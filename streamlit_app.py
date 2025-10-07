@@ -1,12 +1,23 @@
 import os
-
 import streamlit as st
 from rve.ledger import get_session, get_or_create_user
 
-# Configure the main entry page for the Recursive Emergence Framework (REF)
 st.set_page_config(page_title="Sareth • REF", page_icon="✨", layout="wide")
 
-# When authentication is disabled, ensure there is a default guest user in session state
+# --- Preflight: ensure key exists (Secrets > OPENAI_API_KEY or env var) ---
+def _preflight_openai():
+    try:
+        _ = st.secrets.get("OPENAI_API_KEY", None) or os.getenv("OPENAI_API_KEY")
+        if not _:
+            raise RuntimeError
+    except Exception:
+        st.error(
+            "OpenAI key not found.\n\n"
+            "Add **OPENAI_API_KEY** in Streamlit Secrets (Cloud) or set the environment variable locally."
+        )
+        st.stop()
+
+# Auth bootstrap for guest
 AUTH_DISABLED = os.getenv("AUTH_DISABLED", "true").lower() in ("1", "true", "yes")
 if AUTH_DISABLED and "user_id" not in st.session_state:
     sess = get_session()
@@ -18,7 +29,7 @@ if AUTH_DISABLED and "user_id" not in st.session_state:
     st.session_state["username"] = "guest"
     st.session_state["auth_ok"] = True
 
-# Inject responsive CSS and hide the sidebar navigation on the root page
+# Minimal responsive CSS
 st.markdown(
     """
     <style>
@@ -27,23 +38,19 @@ st.markdown(
       [data-testid="stHeader"] { height: 3rem; }
       .block-container { padding-top: 1rem; }
     }
-    @media (min-width: 641px) and (max-width: 1024px){
-      [data-testid="stSidebar"] { width: 260px; }
-    }
-    /* Hide the sidebar navigation items so only the target page appears */
-    [data-testid="stSidebarNav"] ul {
-      display: none;
-    }
+    [data-testid="stSidebarNav"] ul { display: none; }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+# Fail early if no key
+_preflight_openai()
+
+# Go straight to the live agent
 try:
-    # Redirect immediately to the REF page in the pages directory
     st.switch_page("pages/Recursive_Emergence_Framework.py")
 except Exception:
-    # Fallback link if automatic redirection fails
     st.markdown("### Redirecting to Recursive Emergence Framework…")
     st.experimental_set_query_params(page="Recursive_Emergence_Framework")
     st.page_link(
