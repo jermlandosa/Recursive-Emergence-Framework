@@ -1,11 +1,11 @@
-openai>=1.0.0
+openai>=1.40
 numpy
 transformers
 requests
 pytest
 matplotlib>=3.8
 nltk
-streamlit>=1.36.0
+streamlit>=1.37
 sqlalchemy>=2.0
 psycopg2-binary>=2.9
 python-dotenv>=1.0
