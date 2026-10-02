@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-from rve.ledger import get_session, get_or_create_user
 
 st.set_page_config(page_title="Sareth • REF", page_icon="✨", layout="wide")
 
@@ -19,17 +18,7 @@ def _preflight_openai():
         )
         st.stop()
 
-# Auth bootstrap for guest
-AUTH_DISABLED = os.getenv("AUTH_DISABLED", "true").lower() in ("1", "true", "yes")
-if AUTH_DISABLED and "user_id" not in st.session_state:
-    sess = get_session()
-    guest = get_or_create_user(sess, "guest@sareth.app", "guest")
-    st.session_state["user_id"] = guest.id
-    st.session_state["user_email"] = guest.email
-    st.session_state["authentication_status"] = True
-    st.session_state["name"] = "Guest"
-    st.session_state["username"] = "guest"
-    st.session_state["auth_ok"] = True
+# Chat state is session-local; the optional legacy ledger is not needed to boot.
 
 # Minimal responsive CSS
 st.markdown(

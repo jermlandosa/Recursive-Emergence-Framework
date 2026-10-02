@@ -42,3 +42,11 @@ def test_baseline_toggle_and_degraded_notice():
         app.chat_input[0].set_value('Hello').run()
         assert not app.exception and generate.call_args.kwargs['reflection'] is False
         assert app.warning and app.session_state.last_response == 'Draft'
+
+
+def test_entrypoint_boots_without_legacy_database(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder-not-a-real-key")
+    with patch("rve.ledger.get_session", side_effect=RuntimeError("database unavailable")) as db:
+        app = AppTest.from_file(PAGE.parents[1] / "streamlit_app.py").run()
+        assert not app.exception
+        db.assert_not_called()
