@@ -1,75 +1,86 @@
 import streamlit as st
-from rve.live import ensure_chat_state, stream_chat, messages_for_llm, push_user, push_assistant
+from dataclasses import asdict
+from rve.live import ensure_chat_state, messages_for_llm
+from rve.openai_client import openai_client
+from rve.reflection import generate_response
 from rve.glyphs import map_text_to_glyph_events
 
 st.set_page_config(page_title="Recursive Emergence Framework", page_icon="🧭", layout="wide")
 ensure_chat_state()
+st.session_state.setdefault("last_run", None)
 
-# ---- Header ----
-colA, colB, colC = st.columns([5, 2, 1])
+st.title("Recursive Emergence Framework 🧭")
+st.caption("Sareth · Clear answers, with an optional check before responding")
+colA, colB, colC = st.columns([3, 3, 1])
 with colA:
-    st.title("Recursive Emergence Framework (Live) 🧭")
-    st.caption("Streaming responses + real-time glyph mapping (Sareth mode)")
+    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"])
 with colB:
-    model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"], index=0)
+    reflection = st.toggle("Review before answering", value=True,
+        help="Checks the draft for concrete mistakes and revises when needed. Self-review can still be wrong and uses additional model calls.")
 with colC:
-    if st.button("↺ Reset"):
+    if st.button("Reset"):
         st.session_state.chat.clear()
         st.session_state.glyph_trace.clear()
         st.session_state.last_response = ""
-        st.experimental_rerun()
+        st.session_state.last_run = None
+        st.rerun()
 
-with st.expander("System (Sareth)"):
-    sys_new = st.text_area("System Prompt", value=st.session_state.system_prompt, height=140)
-    if sys_new != st.session_state.system_prompt:
-        st.session_state.system_prompt = sys_new
-        st.success("System updated for the next turns.")
+with st.expander("Sareth instructions"):
+    st.session_state.system_prompt = st.text_area("System prompt",
+        value=st.session_state.system_prompt, height=140)
 
-# ---- Layout ----
-left, right = st.columns([3, 2], vertical_alignment="top")
-
+left, right = st.columns([3, 2])
 with left:
-    # History
     for msg in st.session_state.chat:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-
-    # Input
     user_input = st.chat_input("Speak to Sareth…")
     if user_input:
         with st.chat_message("user"):
             st.markdown(user_input)
-        push_user(user_input)
-
-        # Streamed assistant
+        # Commit the turn only when generation succeeds; failed retries do not
+        # leave duplicated user messages in the model's context.
+        context = messages_for_llm() + [{"role": "user", "content": user_input}]
         with st.chat_message("assistant"):
-            slot = st.empty()
-            full_text = ""
-            for delta in stream_chat(messages_for_llm(), model=model, temperature=0.2):
-                full_text += delta
-                # live typing cursor
-                slot.markdown(full_text + "▌")
-
-                # Live glyph mapping per chunk
-                evs = map_text_to_glyph_events(delta)
-                if evs:
-                    st.session_state.glyph_trace.extend(evs)
-
-            # finalize
-            slot.markdown(full_text)
-            push_assistant(full_text)
-            st.session_state.last_response = full_text
+            try:
+                with st.spinner("Preparing and reviewing an answer…" if reflection else "Preparing an answer…"):
+                    result = generate_response(openai_client(), context,
+                        model=model, reflection=reflection)
+            except Exception:
+                st.error("Sareth could not generate an answer. Check the model connection and send your message again.")
+            else:
+                st.markdown(result.answer)
+                if "failed" in result.status:
+                    st.warning("The review could not finish. Showing the original draft.")
+                st.session_state.chat.extend([
+                    {"role": "user", "content": user_input},
+                    {"role": "assistant", "content": result.answer},
+                ])
+                st.session_state.last_response = result.answer
+                st.session_state.last_run = asdict(result)
+                # Map the complete final answer, so keywords split across
+                # provider chunks are not lost. Glyphs are annotations only.
+                st.session_state.glyph_trace.extend(map_text_to_glyph_events(result.answer))
 
 with right:
-    st.subheader("Glyph Trace (live)")
-    if not st.session_state.glyph_trace:
-        st.info("As responses stream, detected glyph signals will appear here.")
-    else:
-        for ev in reversed(st.session_state.glyph_trace[-24:]):
-            st.markdown(
-                f"**{ev['glyph']}** — _{ev['signal']}_ · <span style='opacity:.6'>{ev['t']}</span>",
-                unsafe_allow_html=True,
-            )
-
-    with st.expander("Last response (raw)"):
-        st.code(st.session_state.last_response or "", language="markdown")
+    st.subheader("Response details")
+    run = st.session_state.last_run
+    if run:
+        labels = {"baseline": "Direct answer", "reviewed_unchanged": "Reviewed; draft retained",
+                  "revised": "Reviewed and revised"}
+        st.write(labels.get(run["status"], "Review incomplete; draft retained"))
+        st.caption("Self-review does not independently verify facts.")
+        with st.expander("Review notes and usage"):
+            for issue in run["issues"]:
+                st.write(f"{issue['kind']}: {issue['detail']}")
+                st.write(issue["suggestion"])
+            if not run["issues"]:
+                st.write("No review issues recorded.")
+            st.write(f"Model calls attempted: {run['calls']} · {run['elapsed_seconds']:.1f}s")
+            st.write(f"Reported tokens: {run['prompt_tokens']} input / {run['completion_tokens']} output")
+            if not run["usage_complete"]:
+                st.caption("Token usage is incomplete.")
+    st.subheader("Symbolic annotations")
+    st.caption("Keyword annotations, not confidence or truth scores.")
+    for ev in reversed(st.session_state.glyph_trace[-24:]):
+        st.write(f"{ev['glyph']} · {ev['signal']}")
