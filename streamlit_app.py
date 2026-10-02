@@ -7,7 +7,9 @@ st.set_page_config(page_title="Sareth • REF", page_icon="✨", layout="wide")
 # --- Preflight: ensure key exists (Secrets > OPENAI_API_KEY or env var) ---
 def _preflight_openai():
     try:
-        _ = st.secrets.get("OPENAI_API_KEY", None) or os.getenv("OPENAI_API_KEY")
+        _ = os.getenv("OPENAI_API_KEY")
+        if not _:
+            _ = st.secrets.get("OPENAI_API_KEY", None)
         if not _:
             raise RuntimeError
     except Exception:
@@ -52,7 +54,7 @@ try:
     st.switch_page("pages/Recursive_Emergence_Framework.py")
 except Exception:
     st.markdown("### Redirecting to Recursive Emergence Framework…")
-    st.experimental_set_query_params(page="Recursive_Emergence_Framework")
+    st.query_params["page"] = "Recursive_Emergence_Framework"
     st.page_link(
         "pages/Recursive_Emergence_Framework.py",
         label="Click here if not redirected",
