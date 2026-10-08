@@ -11,6 +11,7 @@ st.session_state.setdefault("last_run", None)
 
 st.title("Recursive Emergence Framework 🧭")
 st.caption("Sareth · Clear answers, with an optional check before responding")
+st.page_link("pages/Reflection_Session.py", label="Open a reflection session with reports, interpretations, and corrections")
 colA, colB, colC = st.columns([3, 3, 1])
 with colA:
     model = st.selectbox("Model", ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini"])
@@ -50,7 +51,7 @@ with left:
                 st.error("Sareth could not generate an answer. Check the model connection and send your message again.")
             else:
                 st.markdown(result.answer)
-                if "failed" in result.status:
+                if "draft_retained" in result.status:
                     st.warning("The review could not finish. Showing the original draft.")
                 st.session_state.chat.extend([
                     {"role": "user", "content": user_input},

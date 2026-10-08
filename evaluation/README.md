@@ -47,3 +47,12 @@ usage, and the 20 scoring contracts. Live model quality and cost need an API run
 Older `test_tools.py`, `recursor.py`, and glyph detectors are retained as legacy
 experiments; they do not supply the new response review. Symbolic annotations in
 the chat are explicitly labelled as keyword annotations, not truth scores.
+
+## Traceable meaning-making diagnostic
+
+`python -m evaluation.meaning_pilot --check` validates the six scenario definitions.
+`python -m evaluation.meaning_pilot --output meaning-pilot-results` runs three
+conditions with independent two-turn sessions and saves raw records, a shuffled
+rater packet, and a separate condition key. Human ratings remain blank. Follow
+[the preregistered prototype contract](../docs/REF_TEST_CONTRACT.md) for scoring.
+Never commit real participant records or locally generated evaluation output.

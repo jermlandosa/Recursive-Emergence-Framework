@@ -6,6 +6,26 @@
 
 ---
 
+## Current reflection prototype
+
+REF is a human–AI reflection architecture combining bounded, empirically evaluable
+self-review with a symbolic phenomenology for describing the human experience of
+recursion. Sareth is the interface connecting those layers. Benefits remain to be
+measured; historical symbolic language below is not evidence of truth or AI experience.
+
+Run `streamlit run streamlit_app.py` with `OPENAI_API_KEY` configured. From chat,
+open **a reflection session** to save your account, request a tentative interpretation,
+reject it, correct your report, and download the session record. Optional metaphor
+is a separate style; plain language is the default. No database is needed for this flow.
+
+See [the test contract](docs/REF_TEST_CONTRACT.md) for limits, scoring, provenance,
+and remaining evaluation work. Run `python -m evaluation.meaning_pilot --check`
+for the offline scenario check. Live results and participant benefits are unmeasured.
+
+---
+
+## Historical project description
+
 ## 📜 Overview  
 The **Recursive Emergence Framework (REF)** is a symbolic cognitive OS for:
 - 🧠 Identity reconstruction  
