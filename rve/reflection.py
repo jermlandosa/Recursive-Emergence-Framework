@@ -4,6 +4,7 @@ Critique is an error-finding aid, not independent evidence or truth verification
 """
 from dataclasses import dataclass, field
 import json
+import math
 import time
 from typing import Any
 
@@ -24,6 +25,27 @@ the requested output format. Express uncertainty when evidence is missing. Retur
 only the final user-facing answer, without the review or a description of the process."""
 
 
+@dataclass(frozen=True)
+class RuntimeLimits:
+    max_calls: int = 3
+    max_output_tokens: int = 3600
+    deadline_seconds: float = 60.0
+    max_context_bytes: int = 64000
+
+    def __post_init__(self):
+        for name in ("max_calls", "max_output_tokens", "max_context_bytes"):
+            if type(getattr(self, name)) is not int or getattr(self, name) < 1:
+                raise ValueError("Budgets must be positive integers")
+        if self.max_calls > 3:
+            raise ValueError("At most three model calls are allowed")
+        if not math.isfinite(self.deadline_seconds) or self.deadline_seconds <= 0:
+            raise ValueError("Deadline must be finite and positive")
+
+
+class BudgetExceeded(RuntimeError):
+    pass
+
+
 @dataclass
 class ReflectionResult:
     answer: str
@@ -36,6 +58,8 @@ class ReflectionResult:
     completion_tokens: int = 0
     elapsed_seconds: float = 0.0
     usage_complete: bool = True
+    budget_events: list[str] = field(default_factory=list)
+    output_tokens_reserved: int = 0
 
 
 def parse_issues(raw: str) -> list[dict[str, str]]:
@@ -58,7 +82,8 @@ def parse_issues(raw: str) -> list[dict[str, str]]:
 
 def generate_response(client: Any, messages: list[dict[str, str]], *,
                       model: str = "gpt-4o-mini", reflection: bool = True,
-                      temperature: float = 0.2, max_tokens: int = 1200) -> ReflectionResult:
+                      temperature: float = 0.2, max_tokens: int = 1200,
+                      limits: RuntimeLimits | None = None) -> ReflectionResult:
     """One draft, at most one critique and one revision; never recurse indefinitely.
 
     The same model and generation settings are used in both modes. If a later
@@ -68,13 +93,39 @@ def generate_response(client: Any, messages: list[dict[str, str]], *,
     """
     if not messages or not any(m.get("role") == "user" for m in messages):
         raise ValueError("A user message is required")
+    limits = limits or RuntimeLimits()
+    if type(max_tokens) is not int or max_tokens < 1:
+        raise ValueError("max_tokens must be a positive integer")
+    # No hidden SDK retries: each attempt must be visible to this controller.
+    if hasattr(client, "with_options"):
+        client = client.with_options(max_retries=0)
     started = time.monotonic()
     result = ReflectionResult("", "", "reflection" if reflection else "baseline", "draft")
 
     def call(context, *, json_output=False):
+        remaining = limits.deadline_seconds - (time.monotonic() - started)
+        reason = None
+        if result.calls >= limits.max_calls:
+            reason = "call_limit"
+        elif remaining <= 0:
+            reason = "deadline"
+        elif result.output_tokens_reserved >= limits.max_output_tokens:
+            reason = "output_budget"
+        elif len(json.dumps(context, ensure_ascii=False).encode("utf-8")) > limits.max_context_bytes:
+            reason = "context_size"
+        if reason:
+            result.budget_events.append(reason)
+            raise BudgetExceeded(reason)
+        allowance = min(max_tokens, limits.max_output_tokens - result.output_tokens_reserved)
+        # Reserve before dispatch; failed/unknown-usage attempts cannot reclaim it.
+        result.output_tokens_reserved += allowance
         result.calls += 1
+        if (result.calls >= limits.max_calls or
+                result.output_tokens_reserved >= 0.8 * limits.max_output_tokens or
+                remaining <= 0.2 * limits.deadline_seconds):
+            result.budget_events.append("budget_approaching")
         kwargs = dict(model=model, messages=context, temperature=temperature,
-                      max_tokens=max_tokens)
+                      max_tokens=allowance, timeout=remaining)
         if json_output:
             kwargs["response_format"] = {"type": "json_object"}
         try:
@@ -88,6 +139,9 @@ def generate_response(client: Any, messages: list[dict[str, str]], *,
         else:
             result.prompt_tokens += usage.prompt_tokens
             result.completion_tokens += usage.completion_tokens
+        if time.monotonic() - started >= limits.deadline_seconds:
+            result.budget_events.append("deadline")
+            raise BudgetExceeded("deadline")
         if not response.choices or response.choices[0].finish_reason != "stop":
             raise ValueError("Model response incomplete or refused")
         content = response.choices[0].message.content
@@ -116,6 +170,8 @@ def generate_response(client: Any, messages: list[dict[str, str]], *,
                     {"role": "user", "content": revision_data},
                 ])
                 result.status = "revised"
+        except BudgetExceeded:
+            result.status = f"{phase}_budget_exhausted_draft_retained"
         except Exception:
             result.status = f"{phase}_failed_draft_retained"
     result.elapsed_seconds = time.monotonic() - started

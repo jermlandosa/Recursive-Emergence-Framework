@@ -3,3 +3,6 @@
 **/.pytest_cache/
 node_modules/
 frontend/dist/
+
+meaning-pilot-results*/
+ref-pilot-results.json

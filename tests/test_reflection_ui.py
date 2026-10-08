@@ -1,9 +1,20 @@
 from unittest.mock import patch
 from pathlib import Path
+import pytest
 from streamlit.testing.v1 import AppTest
 from rve.reflection import ReflectionResult
 
 PAGE = Path(__file__).resolve().parents[1] / 'pages/Recursive_Emergence_Framework.py'
+
+
+@pytest.fixture(autouse=True)
+def test_api_key(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-placeholder-not-a-real-key")
+
+
+def start_page():
+    app = AppTest.from_file(PAGE.parents[1] / 'streamlit_app.py').run()
+    return app.switch_page('pages/' + PAGE.name).run()
 
 
 def test_success_and_reset():
@@ -11,7 +22,7 @@ def test_success_and_reset():
                               mode='reflection', status='revised', calls=3)
     with patch('rve.openai_client.openai_client', return_value=object()), \
          patch('rve.reflection.generate_response', return_value=result) as generate:
-        app = AppTest.from_file(PAGE).run()
+        app = start_page()
         assert not app.exception
         app.chat_input[0].set_value('Hello').run()
         assert not app.exception
@@ -26,7 +37,7 @@ def test_success_and_reset():
 def test_generation_failure_does_not_commit_turn():
     with patch('rve.openai_client.openai_client', return_value=object()), \
          patch('rve.reflection.generate_response', side_effect=TimeoutError):
-        app = AppTest.from_file(PAGE).run()
+        app = start_page()
         app.chat_input[0].set_value('Hello').run()
         assert not app.exception and app.session_state.chat == []
         assert app.error
@@ -37,7 +48,7 @@ def test_baseline_toggle_and_degraded_notice():
                               status='critique_failed_draft_retained', calls=2)
     with patch('rve.openai_client.openai_client', return_value=object()), \
          patch('rve.reflection.generate_response', return_value=result) as generate:
-        app = AppTest.from_file(PAGE).run()
+        app = start_page()
         app.toggle[0].set_value(False).run()
         app.chat_input[0].set_value('Hello').run()
         assert not app.exception and generate.call_args.kwargs['reflection'] is False
