@@ -1,21 +1,15 @@
-import os
 import streamlit as st
+from rve.openai_client import api_error_message, get_api_key
 
 st.set_page_config(page_title="Sareth • REF", page_icon="✨", layout="wide")
 
-# --- Preflight: ensure key exists (Secrets > OPENAI_API_KEY or env var) ---
+# --- Preflight: secrets are checked server-side; never display secret values. ---
 def _preflight_openai():
     try:
-        _ = os.getenv("OPENAI_API_KEY")
-        if not _:
-            _ = st.secrets.get("OPENAI_API_KEY", None)
-        if not _:
-            raise RuntimeError
-    except Exception:
-        st.error(
-            "OpenAI key not found.\n\n"
-            "Add **OPENAI_API_KEY** in Streamlit Secrets (Cloud) or set the environment variable locally."
-        )
+        get_api_key()
+    except RuntimeError as exc:
+        st.error(api_error_message(exc))
+        st.info("In Streamlit Cloud, open the app's settings and add OPENAI_API_KEY to Secrets. The ChatGPT subscription and API billing are separate.")
         st.stop()
 
 # Chat state is session-local; the optional legacy ledger is not needed to boot.

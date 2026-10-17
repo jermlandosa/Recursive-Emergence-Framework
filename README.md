@@ -18,6 +18,36 @@ open **a reflection session** to save your account, request a tentative interpre
 reject it, correct your report, and download the session record. Optional metaphor
 is a separate style; plain language is the default. No database is needed for this flow.
 
+### Streamlit Cloud API troubleshooting
+
+Sareth requires an OpenAI **API** key and API billing, which are separate from
+a ChatGPT Plus or Pro subscription. In your [Streamlit Cloud dashboard](https://share.streamlit.io/),
+open the Sareth app's settings, then **Secrets**, and save:
+
+```toml
+OPENAI_API_KEY = "your-openai-api-key"
+```
+
+Never add the real key to GitHub files, screenshots, or chat messages.
+Restart/reboot the Streamlit app to load changed secrets. In Sareth chat,
+expand **API connection diagnostics**, select the model, and click
+**Test selected model's API connection**. This sends a tiny billable request,
+then displays a safe explanation:
+
+- **Missing key:** Set the secret using the name above.
+- **401:** Replace an invalid, expired, or revoked key.
+- **403 / 404:** Check model availability and project permissions.
+- **429:** Check API usage, limits, billing/credits, or rate limits.
+- **Timeout / connection:** Check connectivity and provider status.
+- **Test succeeds, reflection fails:** Check Streamlit app logs for a
+  review/structured-response failure; the underlying cause may be
+  unrelated to authentication.
+
+The app also accepts the documented `[openai] api_key` and legacy
+`[serith] api_key` secret-table formats. A whitespace-only environment
+value no longer masks a valid Streamlit secret. The API test cannot
+verify any specific user's account until it runs inside the deployed app.
+
 See [the test contract](docs/REF_TEST_CONTRACT.md) for limits, scoring, provenance,
 and remaining evaluation work. Run `python -m evaluation.meaning_pilot --check`
 for the offline scenario check. Live results and participant benefits are unmeasured.

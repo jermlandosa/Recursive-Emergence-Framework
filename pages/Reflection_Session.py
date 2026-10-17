@@ -1,7 +1,7 @@
 """A narrow, inspectable Sareth reflection session."""
 import json
 import streamlit as st
-from rve.openai_client import openai_client
+from rve.openai_client import api_error_message, openai_client
 from rve.session import ReflectionSession
 
 st.set_page_config(page_title='Sareth · Reflection session', page_icon='🧭')
@@ -35,8 +35,9 @@ if st.button('Reflect on the saved conversation', disabled=not reports):
     try:
         with st.spinner('Preparing a tentative interpretation…'):
             session.interpret(openai_client(), mode=mode)
-    except Exception:
-        st.error('No new interpretation was published. Your saved account and feedback remain available. The connection, review, or record check could not finish.')
+    except Exception as exc:
+        st.error(api_error_message(exc))
+        st.caption('No new interpretation was published. Your saved reports and feedback remain available. If the API test works, check server logs for a review or record-contract failure.')
 
 for record in session.records:
     if record.kind == 'human_report':
