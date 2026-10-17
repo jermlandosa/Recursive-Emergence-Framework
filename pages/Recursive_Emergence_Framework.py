@@ -1,7 +1,14 @@
 import streamlit as st
 from dataclasses import asdict
 from rve.live import ensure_chat_state, messages_for_llm
-from rve.openai_client import api_error_message, openai_client
+# Import the module rather than assuming every deployed revision exports
+# recently added diagnostic helpers. The legacy client still supports requests.
+import rve.openai_client as _api
+openai_client = _api.openai_client
+api_error_message = getattr(
+    _api, "api_error_message",
+    lambda exc: "Sareth could not complete the API request. Check Streamlit app logs and restart the app if a deployment was just updated.",
+)
 from rve.reflection import generate_response
 from rve.glyphs import map_text_to_glyph_events
 
