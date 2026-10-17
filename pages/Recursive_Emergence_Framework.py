@@ -1,7 +1,7 @@
 import streamlit as st
 from dataclasses import asdict
 from rve.live import ensure_chat_state, messages_for_llm
-from rve.openai_client import openai_client
+from rve.openai_client import api_error_message, openai_client
 from rve.reflection import generate_response
 from rve.glyphs import map_text_to_glyph_events
 
@@ -26,6 +26,25 @@ with colC:
         st.session_state.last_run = None
         st.rerun()
 
+with st.expander("API connection diagnostics"):
+    st.caption("Test the current model with a very short API request. This uses a small number of billable API tokens. Secrets are not displayed.")
+    if st.button("Test selected model's API connection"):
+        try:
+            with st.spinner("Checking OpenAI connection…"):
+                response = openai_client().chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": "Reply OK"}],
+                    max_tokens=8,
+                    temperature=0,
+                    timeout=15,
+                )
+            if response.choices:
+                st.success("OpenAI accepted a request using this key and model.")
+            else:
+                st.warning("OpenAI returned no completion. Check app logs.")
+        except Exception as exc:
+            st.error(api_error_message(exc))
+
 with st.expander("Sareth instructions"):
     st.session_state.system_prompt = st.text_area("System prompt",
         value=st.session_state.system_prompt, height=140)
@@ -47,8 +66,9 @@ with left:
                 with st.spinner("Preparing and reviewing an answer…" if reflection else "Preparing an answer…"):
                     result = generate_response(openai_client(), context,
                         model=model, reflection=reflection)
-            except Exception:
-                st.error("Sareth could not generate an answer. Check the model connection and send your message again.")
+            except Exception as exc:
+                st.error(api_error_message(exc))
+                st.caption("Your message was not added to the session. Review API diagnostics or the Streamlit server logs before retrying.")
             else:
                 st.markdown(result.answer)
                 if "draft_retained" in result.status:
